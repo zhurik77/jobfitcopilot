@@ -130,6 +130,44 @@ export function createLlmClient({
     return parseJsonSafely(reply);
   }
 
+  /** Глубокий технический и смысловой ATS-аудит резюме */
+  async function auditResume({ resumeText }) {
+    const trimmed = resumeText.slice(0, 4500);
+    const reply = await chatCompletion({
+      messages: [
+        {
+          role: 'system',
+          content: `Ты — эксперт по ATS и техническому рекрутингу на hh.ru.
+Проведи глубокий технический аудит резюме кандидата.
+Оцени по 4 критериям (0-100):
+- keyword_match_score (35%)
+- structure_score (20%)
+- experience_relevance_score (25%)
+- metrics_density_score (20%)
+Вычисли взвешенный overall_ats_score.
+Верни ТОЛЬКО валидный JSON без markdown:
+{
+  "overall_ats_score": 85,
+  "score_breakdown": {
+    "keyword_match_score": 85,
+    "structure_score": 80,
+    "experience_relevance_score": 85,
+    "metrics_density_score": 90
+  },
+  "strengths": ["...", "..."],
+  "gaps": ["..."],
+  "top_recommendations": ["..."]
+}`
+        },
+        { role: 'user', content: `Проведи аудит резюме кандидата:\n\n${trimmed}` }
+      ],
+      temperature: 0.1,
+      maxTokens: 1000,
+      jsonMode: true,
+    });
+    return parseJsonSafely(reply);
+  }
+
   /** Fit-анализ вакансии по резюме */
   async function analyzeFit({ vacancyText, resumeText }) {
     const reply = await chatCompletion({
@@ -332,6 +370,7 @@ ${questionsFormatted}
   return {
     status,
     chatCompletion,
+    auditResume,
     matchAts,
     analyzeFit,
     generateLetter,

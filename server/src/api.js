@@ -4,6 +4,7 @@ import { lintLetter } from './core/letter-lint.js';
 import { rankResumeMatches } from './core/scoring.js';
 import { getPipelineFsmSummary, inspectVacancyFsm } from './core/fsm.js';
 import { createLlmClient } from './core/llm.js';
+import { extractResumeSummary } from './core/resume-summary.js';
 
 /** Статусы, доступные панели. Остальные выставляет только MCP-сервер. */
 export const PANEL_STATUSES = ['approved', 'skipped', 'awaiting_approval', 'found'];
@@ -249,15 +250,53 @@ export function createApi({ db, lint = lintLetter, llm, autopilot }) {
     }
     if (a === 'resumes' && parts.length === 1) {
       allow(method, 'GET');
-      // Текст и разбор резюме тяжёлые, в списке они не нужны: их отдаёт GET /api/resumes/:id.
-      return { items: db.listResumes().map(({ text, review, ...rest }) => rest) };
+      // Возвращаем сводку метаданных (wordCount, compRange, experience, skills, facts, reviewScore)
+      const list = db.listResumes();
+      return {
+        items: list.map((r) => {
+          const { text, review, ...summary } = extractResumeSummary(r);
+          return summary;
+        })
+      };
+    }
+    if (a === 'resumes' && parts.length === 2 && parts[1] === 'audit-all') {
+      allow(method, 'POST');
+      if (!llmClient || typeof llmClient.auditResume !== 'function') {
+        throw new HttpError(503, 'llm_unavailable', 'LLM клиент не поддерживает аудит резюме');
+      }
+      const list = db.listResumes();
+      const results = [];
+      for (const r of list) {
+        try {
+          const reviewResult = await llmClient.auditResume({ resumeText: r.text });
+          const score = typeof reviewResult?.overall_ats_score === 'number' ? reviewResult.overall_ats_score : null;
+          db.saveResumeReview(r.id, reviewResult, score);
+          results.push({ id: r.id, title: r.title, success: true, score });
+        } catch (err) {
+          results.push({ id: r.id, title: r.title, success: false, error: err.message });
+        }
+      }
+      return { processed: results.length, results };
+    }
+    if (a === 'resumes' && parts.length === 3 && parts[2] === 'review') {
+      allow(method, 'POST');
+      const id = seg(1);
+      const resume = db.getResume(id);
+      if (!resume) throw new HttpError(404, 'not_found', `Резюме не найдено: ${id}`);
+      if (!llmClient || typeof llmClient.auditResume !== 'function') {
+        throw new HttpError(503, 'llm_unavailable', 'LLM клиент не поддерживает аудит резюме');
+      }
+      const reviewResult = await llmClient.auditResume({ resumeText: resume.text });
+      const score = typeof reviewResult?.overall_ats_score === 'number' ? reviewResult.overall_ats_score : null;
+      db.saveResumeReview(id, reviewResult, score);
+      return { resume: extractResumeSummary(db.getResume(id)) };
     }
     if (a === 'resumes' && parts.length === 2) {
       allow(method, 'GET');
       const id = seg(1);
       const resume = db.getResume(id);
       if (!resume) throw new HttpError(404, 'not_found', `Резюме не найдено: ${id}`);
-      return { resume };
+      return { resume: extractResumeSummary(resume) };
     }
     if (a === 'settings' && parts.length === 1) {
       if (method === 'PUT') {
@@ -272,6 +311,10 @@ export function createApi({ db, lint = lintLetter, llm, autopilot }) {
       return { settings: db.getSettings() };
     }
     if (a === 'searches' && parts.length === 1) {
+      if (method === 'POST') {
+        const body = asObject(await readJson(req));
+        return { search: db.saveSearch(body) };
+      }
       allow(method, 'GET');
       return { items: db.listSearches() };
     }

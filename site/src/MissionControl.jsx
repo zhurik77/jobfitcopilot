@@ -1220,26 +1220,36 @@ function mapDbResumeToUi(dbRes, index) {
   const shortCode = `R${index + 1}`;
   const hexes = ['#0284c7', '#6366f1', '#10b981', '#14b8a6', '#f43f5e', '#f59e0b'];
   const accentHex = hexes[index % hexes.length];
-  const words = dbRes.text ? dbRes.text.split(/\s+/).filter(Boolean).length : 380;
+  const words = dbRes.wordCount || (dbRes.text ? dbRes.text.split(/\s+/).filter(Boolean).length : 380);
+  const comp = dbRes.compRange || dbRes.salary || '165 000 ₽';
+  const exp = dbRes.experience || '8.2 yrs';
+  const ats = dbRes.atsReadiness || dbRes.reviewScore || 85;
+  const skills = Array.isArray(dbRes.skills) && dbRes.skills.length > 0
+    ? dbRes.skills
+    : ['Python', 'FastAPI', 'AI/RAG', 'PostgreSQL', 'Docker'];
+  const facts = Array.isArray(dbRes.facts) && dbRes.facts.length > 0
+    ? dbRes.facts
+    : [
+        'Опыт разработки и проектирования высоконагруженных систем.',
+        'Успешный запуск продакшен-сервисов со строгими требованиями к аптайму.',
+        'Навыки оптимизации архитектуры и автоматизации сквозных процессов.'
+      ];
+
   return {
     id: dbRes.id,
     shortCode,
     filterLabel: `${index + 1}. ${(dbRes.title || 'Резюме').slice(0, 15)}`,
     title: dbRes.title || 'Резюме',
     hhId: dbRes.externalId || `hh_${String(dbRes.id).slice(0, 8)}`,
-    atsReadiness: dbRes.reviewScore || 90,
+    atsReadiness: ats,
     wordCount: words,
     visibility: dbRes.visibility || 'public',
     auditStatus: dbRes.visibility === 'hidden' ? 'Blocked · Hidden on hh.ru' : 'Verified · Clean',
-    experience: '5.0+ yrs',
-    compRange: '300–450k ₽',
+    experience: exp,
+    compRange: comp,
     accentHex,
-    skills: dbRes.skills || ['TypeScript', 'React', 'Node.js', 'Python', 'FastAPI', 'PostgreSQL', 'AI/RAG'],
-    facts: dbRes.facts || [
-      'Опыт разработки и проектирования высоконагруженных систем и AI-агентов.',
-      'Успешный запуск продакшен-сервисов со строгими требованиями к аптайму и latency.',
-      'Навыки оптимизации архитектуры и автоматизации сквозных процессов.',
-    ],
+    skills,
+    facts,
     raw: dbRes,
   };
 }
