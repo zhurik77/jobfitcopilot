@@ -1285,9 +1285,9 @@ function mapDbVacancyToUi(dbVac, resumesList, fallbackIndex = 0) {
     id: dbVac.key || `vac-db-${hhId}`,
     rawKey: dbVac.key,
     hhId,
-    company: dbVac.employer || 'Компания (hh.ru)',
+    company: dbVac.company || dbVac.employer || 'Компания',
     title: dbVac.title || 'Вакансия',
-    cityFormat: dbVac.city ? `${dbVac.city} · Удалённо` : 'Москва · Удалённо',
+    cityFormat: dbVac.address || (dbVac.city ? `${dbVac.city} · Удалённо` : 'Москва · Удалённо'),
     salary: dbVac.salary || 'Не указана',
     stage,
     matchedResumeId,
@@ -1319,7 +1319,7 @@ function mapDbVacancyToUi(dbVac, resumesList, fallbackIndex = 0) {
 export default function App() {
   // Core State
   const [resumes, setResumes] = useState(INITIAL_RESUMES);
-  const [vacancies, setVacancies] = useState(INITIAL_VACANCIES);
+  const [vacancies, setVacancies] = useState([]);
   const [cronPolls, setCronPolls] = useState(INITIAL_CRON_POLLS);
   const [streamPoolIdx, setStreamPoolIdx] = useState(0);
   const [parsedTotalCount, setParsedTotalCount] = useState(50);
@@ -1372,51 +1372,27 @@ export default function App() {
   // Live journalctl Daemon Stream Logs
   const [executionLogs, setExecutionLogs] = useState([
     {
-      id: 'log-1',
-      ts: '22:40:08',
-      subsys: 'HITL-GATE',
-      vacancyId: 'vac-10',
-      text: 'T-Bank (Т-Банк) · Senior Fullstack / AI Engineer: ATS 92% (R1) -> Удержано в Шлюзе HITL (3 вопроса анкеты)',
-      tone: 'rose',
+      id: 'log-boot-1',
+      ts: new Date().toTimeString().slice(0, 8),
+      subsys: 'SYSTEM',
+      vacancyId: null,
+      text: 'JobFit Copilot Mission Control запущен. Загрузка данных из SQLite...',
+      tone: 'indigo',
     },
     {
-      id: 'log-2',
-      ts: '22:39:42',
-      subsys: 'HITL-GATE',
-      vacancyId: 'vac-11',
-      text: 'Marvel Distribution · Менеджер по закупкам (Китай): ATS 93% (R5) -> Карантин HITL (Резюме #5 скрыто на hh.ru)',
-      tone: 'rose',
-    },
-    {
-      id: 'log-3',
-      ts: '22:39:15',
+      id: 'log-boot-2',
+      ts: new Date().toTimeString().slice(0, 8),
       subsys: 'LLM-LINT',
-      vacancyId: 'vac-07',
-      text: 'Ozon Tech · Senior PM (AI Search): Письмо 148w сгенерировано · Обнаружен 1 штамп ("динамично развивающаяся компания")',
-      tone: 'amber',
-    },
-    {
-      id: 'log-4',
-      ts: '22:38:55',
-      subsys: 'ATS-TEST',
-      vacancyId: 'vac-17',
-      text: 'Legacy Telecom · Senior PHP 7.4 / Bitrix: ATS 42% (R1) < 65% -> Ветка авто-отсева -> ВЫХОД B: ПРОПУСК',
-      tone: 'slate',
-    },
-    {
-      id: 'log-5',
-      ts: '22:38:12',
-      subsys: 'DISPATCH',
-      vacancyId: 'vac-16',
-      text: 'Точка Банк · Senior Fullstack AI: Отклик доставлен -> Статус hh.ru: Приглашение · Чт 15:00',
+      vacancyId: null,
+      text: 'FastAPI_CDEKLLM: yandex/deepseek-v4.1-flash активен · Анти-штамп линтер готов',
       tone: 'emerald',
     },
     {
-      id: 'log-6',
-      ts: '22:37:30',
-      subsys: 'HH-POLL',
-      vacancyId: 'vac-01',
-      text: 'cron[AI Product Engineer]: Найдена вакансия Yandex Cloud · Senior Fullstack Engineer (380–460k ₽)',
+      id: 'log-boot-3',
+      ts: new Date().toTimeString().slice(0, 8),
+      subsys: 'HITL-GATE',
+      vacancyId: null,
+      text: 'Шлюз HITL: режим 95% фоновой работы / 5% одобрение оператором активен',
       tone: 'sky',
     },
   ]);
@@ -1489,12 +1465,9 @@ export default function App() {
           }
 
           if (pipeRes.status === 'fulfilled' && pipeRes.value?.items && pipeRes.value.items.length > 0) {
-            setVacancies((prev) => {
-              const dbVacancies = pipeRes.value.items.map((v, i) => mapDbVacancyToUi(v, resumes, i));
-              const dbKeys = new Set(dbVacancies.map((v) => v.id));
-              const nonOverlapping = prev.filter((v) => !dbKeys.has(v.id));
-              return [...dbVacancies, ...nonOverlapping];
-            });
+            const dbVacancies = pipeRes.value.items.map((v, i) => mapDbVacancyToUi(v, resumes, i));
+            setVacancies(dbVacancies);
+            setParsedTotalCount(pipeRes.value.items.length);
           }
         }
       } catch (err) {
