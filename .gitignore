@@ -11,3 +11,4 @@ node_modules/
 
 # Зависимости лендинга (site/package-lock.json коммитится — нужен для npm ci)
 site/node_modules/
+graphify-out/

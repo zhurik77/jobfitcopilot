@@ -13,7 +13,8 @@
     "test": "node --test",
     "check": "npm run lint && npm test",
     "shots": "node tools/shot.js && node tools/shot-wide.js",
-    "site": "npm --prefix site run build"
+    "site": "npm --prefix site run build",
+    "panel": "npm --prefix site run build"
   },
   "devDependencies": {
     "eslint": "^9.15.0",
