@@ -236,19 +236,27 @@ ${questionsFormatted}
   /** Комплексный автономный аудит и обработка вакансии через FSM */
   async function processVacancyWorkflow({ vacancy, resumes, db }) {
     const key = vacancy.key;
-    const vacancyText = `${vacancy.title}\n${vacancy.company || ''}\n${vacancy.description || ''}`;
+    const desc = vacancy.description || [vacancy.snippet, (vacancy.skills || []).join(', ')].filter(Boolean).join('\n') || '';
+    const vacancyText = `Должность: ${vacancy.title}\nКомпания: ${vacancy.company || ''}\nОпыт: ${vacancy.experience || ''}\nЗарплата: ${vacancy.salary || ''}\nСтек и требования:\n${desc}`;
 
-    // Предварительный отбор наиболее релевантных резюме по заголовку (до 3 штук)
-    const vTitle = (vacancy.title || '').toLowerCase();
-    const sortedCandidates = [...resumes].filter(r => r.text).sort((a, b) => {
-      const aTitle = (a.title || a.name || '').toLowerCase();
-      const bTitle = (b.title || b.name || '').toLowerCase();
-      const aOverlap = vTitle.split(/\s+/).filter(w => w.length > 3 && aTitle.includes(w)).length;
-      const bOverlap = vTitle.split(/\s+/).filter(w => w.length > 3 && bTitle.includes(w)).length;
-      return bOverlap - aOverlap;
-    });
+    // Глубокий интеллектуальный отбор пула резюме для ATS-матчинга
+    // Извлекаем ключевые смысловые токены из вакансии (заголовок, стек, сниппет)
+    const searchTokens = `${vacancy.title || ''} ${vacancy.snippet || ''} ${(vacancy.skills || []).join(' ')}`
+      .toLowerCase()
+      .split(/[^a-zа-я0-9+#_]+/i)
+      .filter((w) => w.length > 2);
 
-    const candidatePool = sortedCandidates.slice(0, 3);
+    const scoredCandidates = [...resumes].filter(r => r.text).map((r) => {
+      const rLower = (r.text + ' ' + (r.title || r.name || '')).toLowerCase();
+      let overlap = 0;
+      for (const token of searchTokens) {
+        if (rLower.includes(token)) overlap += 1;
+      }
+      return { resume: r, overlap };
+    }).sort((a, b) => b.overlap - a.overlap);
+
+    // Берём топ-3 наиболее релевантных резюме для глубокого LLM ATS-разбора
+    const candidatePool = scoredCandidates.slice(0, 3).map((sc) => sc.resume);
 
     // 1. ATS Matching с кандидатами
     const scoredResumes = [];

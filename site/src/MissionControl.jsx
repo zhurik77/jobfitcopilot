@@ -1194,22 +1194,22 @@ const INITIAL_VACANCIES = [
 ];
 
 // ============================================================================
-// 5. SVG BEZIER GRAPH GEOMETRY (1380 x 630 COORDINATE SPACE)
+// 5. SVG BEZIER GRAPH GEOMETRY (EXPANDED 1760 x 780 HIGH-DENSITY COORDINATE SPACE)
 // ============================================================================
 
 const GRAPH_PATHS = {
-  // Node 01 (x:16..232, y:36..410) -> Node 02 (x:284..520, y:36..430)
-  e1_2: 'M 232 220 C 258 220, 258 220, 284 220',
-  // Node 02 Pass (>=65%) -> Node 03 (x:584..808, y:36..365)
-  e2_3: 'M 520 190 C 552 190, 552 190, 584 190',
-  // Node 03 -> Node 04 HITL (x:860..1106, y:36..400)
-  e3_4: 'M 808 190 C 834 190, 834 190, 860 190',
-  // Node 04 HITL Approve -> Terminal Exit 05A: ВЫХОД: ОТКЛИК (x:1168..1364, y:26..300)
-  e4_approve: 'M 1106 145 C 1137 145, 1137 145, 1168 145',
-  // Node 04 HITL Skip -> Terminal Exit 05B: ВЫХОД: ПРОПУСК (x:1168..1364, y:328..604)
-  e4_skip: 'M 1106 325 C 1137 325, 1137 430, 1168 430',
+  // Node 01 (x:20..300, y:40..570) -> Node 02 (x:360..670, y:40..590)
+  e1_2: 'M 300 280 C 330 280, 330 280, 360 280',
+  // Node 02 Pass (>=65%) -> Node 03 (x:740..1040, y:40..530)
+  e2_3: 'M 670 230 C 705 230, 705 230, 740 230',
+  // Node 03 -> Node 04 HITL (x:1110..1440, y:40..590)
+  e3_4: 'M 1040 230 C 1075 230, 1075 230, 1110 230',
+  // Node 04 HITL Approve -> Terminal Exit 05A: ВЫХОД: ОТКЛИК (x:1510..1750, y:30..350)
+  e4_approve: 'M 1440 165 C 1475 165, 1475 165, 1510 165',
+  // Node 04 HITL Skip -> Terminal Exit 05B: ВЫХОД: ПРОПУСК (x:1510..1750, y:380..730)
+  e4_skip: 'M 1440 400 C 1475 400, 1475 460, 1510 460',
   // Node 02 Fail (<65%) -> Terminal Exit 05B: ВЫХОД: ПРОПУСК along bottom corridor
-  e2_skip: 'M 520 395 C 620 535, 960 535, 1168 535',
+  e2_skip: 'M 670 490 C 780 675, 1310 675, 1510 640',
 };
 
 // ============================================================================
@@ -1347,7 +1347,7 @@ export default function App() {
   const [cliInput, setCliInput] = useState('');
 
   // Interactive Decision Tree Trace & Viewport Controls
-  const [treeZoom, setTreeZoom] = useState(100);
+  const [treeZoom, setTreeZoom] = useState(135);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0 });
@@ -1498,12 +1498,41 @@ export default function App() {
           prev.map((item) => {
             if (item.id !== inspectedId) return item;
             const latestLetter = data.letters?.[0];
+            const fitAnalysis = (data.analyses || []).find((a) => a.kind === 'fit');
+            const atsAnalysis = (data.analyses || []).find((a) => a.kind === 'ats');
+            const realLedger = fitAnalysis?.payload?.ledger;
+            const atsPayload = atsAnalysis?.payload;
+            const fitPayload = fitAnalysis?.payload;
+            const rankedComparison = data.comparison || [];
+
+            // Подтягиваем реальные ATS скоры из comparison
+            const nextResumeScores = { ...item.resumeScores };
+            rankedComparison.forEach((c) => {
+              if (c.resumeId) {
+                nextResumeScores[c.resumeId] = {
+                  overall: c.overall ?? 50,
+                  hardSkills: c.hardCoverage ?? c.overall ?? 50,
+                  domain: c.overall ?? 50,
+                  seniority: c.overall ?? 50,
+                };
+              }
+            });
+
             return {
               ...item,
               coverLetter: latestLetter?.text || item.coverLetter,
               cleanDraft: latestLetter?.text || item.cleanDraft,
               letterId: latestLetter?.id || item.letterId,
               description: data.vacancy?.description || item.description,
+              analyses: data.analyses || [],
+              comparison: rankedComparison,
+              resumeScores: nextResumeScores,
+              scoreLedger: Array.isArray(realLedger) && realLedger.length > 0
+                ? realLedger.map((l) => ({ delta: l.delta, rule: l.text }))
+                : item.scoreLedger,
+              atsPayload,
+              fitPayload,
+              atsScore: fitAnalysis?.score ?? item.atsScore,
             };
           })
         );
@@ -2594,16 +2623,26 @@ export default function App() {
             const detail = await detailRes.json();
             const latestLetter = detail.letters?.[0];
             if (latestLetter) {
+              const fitAnalysis = (detail.analyses || []).find((a) => a.kind === 'fit');
+              const atsAnalysis = (detail.analyses || []).find((a) => a.kind === 'ats');
+              const realLedger = fitAnalysis?.payload?.ledger;
               setVacancies((prev) =>
                 prev.map((v) =>
                   v.id === vacancyId
                     ? {
                         ...v,
-                        atsScore: data.fitScore || v.atsScore,
+                        atsScore: data.fitScore || fitAnalysis?.score || v.atsScore,
                         coverLetter: latestLetter.text,
                         cleanDraft: latestLetter.text,
                         letterId: latestLetter.id,
                         questions: (v.questions || []).map((q) => ({ ...q, needsReview: false })),
+                        analyses: detail.analyses || [],
+                        comparison: detail.comparison || [],
+                        scoreLedger: Array.isArray(realLedger) && realLedger.length > 0
+                          ? realLedger.map((l) => ({ delta: l.delta, rule: l.text }))
+                          : v.scoreLedger,
+                        atsPayload: atsAnalysis?.payload,
+                        fitPayload: fitAnalysis?.payload,
                       }
                     : v
                 )
@@ -3092,27 +3131,27 @@ export default function App() {
               <>
                 <div className="inline-flex items-center rounded-[5px] bg-[#12151C] border border-[#1E2330] font-mono text-[11px] text-[#A1A1AA]">
                   <button
-                    onClick={() => setTreeZoom((z) => Math.max(70, z - 10))}
-                    className="px-1.5 py-0.5 hover:text-white cursor-pointer"
-                    title="Zoom Out"
+                    onClick={() => setTreeZoom((z) => Math.max(70, z - 15))}
+                    className="px-2 py-0.5 hover:text-white cursor-pointer"
+                    title="Zoom Out (-15%)"
                   >
                     <ZoomOut className="w-3.5 h-3.5" />
                   </button>
-                  <span className="px-1.5 tabular-nums">{treeZoom}%</span>
+                  <span className="px-2 tabular-nums font-bold text-white">{treeZoom}%</span>
                   <button
-                    onClick={() => setTreeZoom((z) => Math.min(115, z + 10))}
-                    className="px-1.5 py-0.5 hover:text-white cursor-pointer"
-                    title="Zoom In"
+                    onClick={() => setTreeZoom((z) => Math.min(220, z + 15))}
+                    className="px-2 py-0.5 hover:text-white cursor-pointer"
+                    title="Zoom In (+15%)"
                   >
                     <ZoomIn className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => {
-                      setTreeZoom(100);
+                      setTreeZoom(135);
                       setPanOffset({ x: 0, y: 0 });
                     }}
-                    className="px-1.5 py-0.5 border-l border-[#1E2330] hover:text-white cursor-pointer"
-                    title="Fit & Reset Pan"
+                    className="px-2 py-0.5 border-l border-[#1E2330] hover:text-white cursor-pointer"
+                    title="Fit & Reset Pan (135%)"
                   >
                     <Maximize2 className="w-3 h-3" />
                   </button>
@@ -3161,7 +3200,7 @@ export default function App() {
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={handleCanvasMouseUp}
-              className={`flex-1 relative overflow-auto min-h-[635px] ${
+              className={`flex-1 relative overflow-auto min-h-[780px] ${
                 isPanning ? 'cursor-grabbing' : 'cursor-grab'
               }`}
               style={{
@@ -3207,26 +3246,26 @@ export default function App() {
                 )}
               </div>
 
-              {/* 1380 x 630 SVG + Node Card Coordinate Stage */}
+              {/* 1760 x 780 SVG + Node Card Coordinate Stage */}
               <div
                 className="mx-auto my-1 origin-top-left transition-transform duration-150 select-none"
                 style={{
-                  width: '1380px',
-                  height: '630px',
+                  width: '1760px',
+                  height: '780px',
                   transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${treeZoom / 100})`,
                 }}
               >
                 <div
-                  className="relative w-[1380px] h-[630px]"
+                  className="relative w-[1760px] h-[780px]"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   {/* ===========================================================
                       LAYER 1: SVG BEZIER EDGES, FORK LABELS & ANIMATED TOKENS
                      =========================================================== */}
                   <svg
-                    width="1380"
-                    height="630"
-                    viewBox="0 0 1380 630"
+                    width="1760"
+                    height="780"
+                    viewBox="0 0 1760 780"
                     className="absolute inset-0 pointer-events-none"
                   >
                     <defs>
@@ -3254,7 +3293,7 @@ export default function App() {
                       stroke={activeTrace?.edgeKey === 'e2_3' ? '#818cf8' : '#312e81'}
                       strokeWidth={activeTrace?.edgeKey === 'e2_3' ? '3' : '2'}
                     />
-                    <g transform="translate(526, 162)">
+                    <g transform="translate(680, 202)">
                       <rect
                         x="0"
                         y="0"
@@ -3293,7 +3332,7 @@ export default function App() {
                       stroke={activeTrace?.edgeKey === 'e4_approve' ? '#34d399' : '#065f46'}
                       strokeWidth={activeTrace?.edgeKey === 'e4_approve' ? '3' : '2'}
                     />
-                    <g transform="translate(1110, 118)">
+                    <g transform="translate(1445, 138)">
                       <rect
                         x="0"
                         y="0"
@@ -3325,7 +3364,7 @@ export default function App() {
                       strokeWidth={activeTrace?.edgeKey === 'e4_skip' ? '3' : '1.75'}
                       strokeDasharray="5 4"
                     />
-                    <g transform="translate(1108, 355)">
+                    <g transform="translate(1445, 410)">
                       <rect
                         x="0"
                         y="0"
@@ -3357,7 +3396,7 @@ export default function App() {
                       strokeWidth={activeTrace?.edgeKey === 'e2_skip' ? '3' : '2'}
                       strokeDasharray="6 4"
                     />
-                    <g transform="translate(695, 513)">
+                    <g transform="translate(930, 650)">
                       <rect
                         x="0"
                         y="0"
@@ -3408,10 +3447,10 @@ export default function App() {
                      =========================================================== */}
 
                   {/* -----------------------------------------------------------
-                      NODE 01: ВХОД: ПОТОК hh.ru (x:16, y:36, w:216, h:395)
+                      NODE 01: ВХОД: ПОТОК hh.ru (x:20, y:40, w:280, h:530)
                      ----------------------------------------------------------- */}
                   <div
-                    style={{ left: 16, top: 36, width: 216, height: 395 }}
+                    style={{ left: 20, top: 40, width: 280, height: 530 }}
                     className={`absolute rounded-[6px] bg-[#0D0F13] border transition-colors flex flex-col ${
                       activeTrace?.activeNodeId === 'found'
                         ? 'border-sky-400 ring-1 ring-sky-400/50'
@@ -3419,29 +3458,29 @@ export default function App() {
                     }`}
                   >
                     <span
-                      style={{ top: 180 }}
-                      className="w-3 h-3 rounded-full bg-sky-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
+                      style={{ top: 240 }}
+                      className="w-3.5 h-3.5 rounded-full bg-sky-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
                     />
 
-                    <div className="px-3 py-2 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
+                    <div className="px-3 py-2.5 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
+                      <div className="flex items-center justify-between font-mono text-[11px]">
                         <span className="text-sky-400 font-bold">NODE-01 · HH-POLL</span>
                         <span className="text-[#71717A] tabular-nums">
                           {auto247 ? `poll ${pollCountdown}s` : 'paused'}
                         </span>
                       </div>
-                      <div className="text-xs font-bold text-white mt-0.5">
+                      <div className="text-sm font-bold text-white mt-0.5">
                         ВХОД: ПОТОК hh.ru
                       </div>
                     </div>
 
                     {/* Live Cron Queries Strip + Manual +1 Trigger */}
-                    <div className="p-2 border-b border-[#1E2330] bg-[#10131A] space-y-1.5">
+                    <div className="p-2.5 border-b border-[#1E2330] bg-[#10131A] space-y-2">
                       <div className="flex flex-wrap gap-1">
                         {cronPolls.slice(0, 3).map((cp) => (
                           <span
                             key={cp.id}
-                            className="font-mono text-[9.5px] px-1.5 py-0.5 rounded bg-[#12151C] border border-[#1E2330] text-[#A1A1AA] truncate max-w-full"
+                            className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#12151C] border border-[#1E2330] text-[#A1A1AA] truncate max-w-full"
                           >
                             {cp.query}
                           </span>
@@ -3451,16 +3490,16 @@ export default function App() {
                       <button
                         onClick={handleTraceSingleVacancy}
                         disabled={isTracingSingle}
-                        className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-[5px] text-[11px] font-semibold bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white transition-colors cursor-pointer"
+                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[5px] text-xs font-semibold bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white transition-colors cursor-pointer"
                       >
                         {isTracingSingle ? (
                           <>
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             <span>Трассировка...</span>
                           </>
                         ) : (
                           <>
-                            <Play className="w-3 h-3 fill-current" />
+                            <Play className="w-3.5 h-3.5 fill-current" />
                             <span>+1 Вход (Трассировать)</span>
                           </>
                         )}
@@ -3468,8 +3507,8 @@ export default function App() {
                     </div>
 
                     {/* Incoming Queue List */}
-                    <div className="p-2 flex-1 overflow-y-auto space-y-1.5">
-                      <div className="flex items-center justify-between font-mono text-[10px] text-[#71717A] px-0.5">
+                    <div className="p-2 flex-1 overflow-y-auto space-y-2">
+                      <div className="flex items-center justify-between font-mono text-[11px] text-[#71717A] px-0.5">
                         <span>В очереди на тест ({parsedTotalCount} всего):</span>
                         <span className="tabular-nums text-sky-400 font-bold">
                           {treeBuckets.found.length}
@@ -3477,7 +3516,7 @@ export default function App() {
                       </div>
 
                       {treeBuckets.found.length === 0 ? (
-                        <div className="p-3 rounded border border-dashed border-[#1E2330] text-center font-mono text-[10px] text-[#71717A]">
+                        <div className="p-3 rounded border border-dashed border-[#1E2330] text-center font-mono text-[11px] text-[#71717A]">
                           Ожидание следующего тика cron hh.ru...
                         </div>
                       ) : (
@@ -3491,22 +3530,22 @@ export default function App() {
                                 setInspectedId(v.id);
                                 setDrawerTab('battle');
                               }}
-                              className={`p-2 rounded-[5px] bg-[#12151C] border border-[#1E2330] hover:border-sky-500/60 cursor-pointer transition-opacity ${
+                              className={`p-2.5 rounded-[5px] bg-[#12151C] border border-[#1E2330] hover:border-sky-500/60 cursor-pointer transition-opacity ${
                                 hasActiveFilter && !matched ? 'opacity-25' : 'opacity-100'
                               }`}
                             >
                               <div className="flex items-center justify-between gap-1">
-                                <span className="text-[11.5px] font-semibold text-white truncate">
+                                <span className="text-xs font-semibold text-white truncate">
                                   {v.company}
                                 </span>
-                                <span className="font-mono text-[10px] text-sky-400 shrink-0">
+                                <span className="font-mono text-[10.5px] text-sky-400 shrink-0">
                                   {r?.shortCode}
                                 </span>
                               </div>
-                              <div className="text-[10.5px] text-[#A1A1AA] truncate mt-0.5">
+                              <div className="text-[11px] text-[#A1A1AA] truncate mt-0.5">
                                 {v.title}
                               </div>
-                              <div className="font-mono text-[10px] text-[#71717A] mt-0.5 tabular-nums">
+                              <div className="font-mono text-[10.5px] text-[#71717A] mt-0.5 tabular-nums">
                                 {v.salary}
                               </div>
                             </div>
@@ -3517,10 +3556,10 @@ export default function App() {
                   </div>
 
                   {/* -----------------------------------------------------------
-                      NODE 02: ATS ТЕСТ (6 РЕЗЮМЕ) (x:284, y:36, w:236, h:410)
+                      NODE 02: ATS ТЕСТ (6 РЕЗЮМЕ) (x:360, y:40, w:310, h:550)
                      ----------------------------------------------------------- */}
                   <div
-                    style={{ left: 284, top: 36, width: 236, height: 410 }}
+                    style={{ left: 360, top: 40, width: 310, height: 550 }}
                     className={`absolute rounded-[6px] bg-[#0D0F13] border transition-colors flex flex-col ${
                       activeTrace?.activeNodeId === 'scored'
                         ? 'border-indigo-400 ring-1 ring-indigo-400/60'
@@ -3528,26 +3567,26 @@ export default function App() {
                     }`}
                   >
                     <span
-                      style={{ top: 180 }}
-                      className="w-3 h-3 rounded-full bg-indigo-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
+                      style={{ top: 240 }}
+                      className="w-3.5 h-3.5 rounded-full bg-indigo-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
                     />
                     <span
-                      style={{ top: 150 }}
-                      className="w-3 h-3 rounded-full bg-indigo-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
+                      style={{ top: 190 }}
+                      className="w-3.5 h-3.5 rounded-full bg-indigo-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
                     />
                     <span
-                      style={{ top: 355 }}
-                      className="w-3 h-3 rounded-full bg-rose-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
+                      style={{ top: 450 }}
+                      className="w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
                     />
 
-                    <div className="px-3 py-2 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
+                    <div className="px-3 py-2.5 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
+                      <div className="flex items-center justify-between font-mono text-[11px]">
                         <span className="text-indigo-400 font-bold">NODE-02 · ATS-TEST</span>
                         <span className="text-[#71717A] tabular-nums">
                           {treeBuckets.scored.length} active
                         </span>
                       </div>
-                      <div className="text-xs font-bold text-white mt-0.5">
+                      <div className="text-sm font-bold text-white mt-0.5">
                         ATS ТЕСТ (6 РЕЗЮМЕ)
                       </div>
                     </div>
@@ -3651,10 +3690,10 @@ export default function App() {
                   </div>
 
                   {/* -----------------------------------------------------------
-                      NODE 03: ПИСЬМО + ЛИНТЕР (x:584, y:36, w:224, h:345)
+                      NODE 03: ПИСЬМО + ЛИНТЕР (x:740, y:40, w:300, h:490)
                      ----------------------------------------------------------- */}
                   <div
-                    style={{ left: 584, top: 36, width: 224, height: 345 }}
+                    style={{ left: 740, top: 40, width: 300, height: 490 }}
                     className={`absolute rounded-[6px] bg-[#0D0F13] border transition-colors flex flex-col ${
                       activeTrace?.activeNodeId === 'drafted'
                         ? 'border-amber-400 ring-1 ring-amber-400/60'
@@ -3662,27 +3701,27 @@ export default function App() {
                     }`}
                   >
                     <span
-                      style={{ top: 150 }}
-                      className="w-3 h-3 rounded-full bg-amber-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
+                      style={{ top: 190 }}
+                      className="w-3.5 h-3.5 rounded-full bg-amber-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
                     />
                     <span
-                      style={{ top: 150 }}
-                      className="w-3 h-3 rounded-full bg-amber-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
+                      style={{ top: 190 }}
+                      className="w-3.5 h-3.5 rounded-full bg-amber-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
                     />
 
-                    <div className="px-3 py-2 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
+                    <div className="px-3 py-2.5 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
+                      <div className="flex items-center justify-between font-mono text-[11px]">
                         <span className="text-amber-400 font-bold">NODE-03 · LLM-LINT</span>
                         <span className="text-[#71717A] tabular-nums">
                           {treeBuckets.drafted.length} drafts
                         </span>
                       </div>
-                      <div className="text-xs font-bold text-white mt-0.5">
+                      <div className="text-sm font-bold text-white mt-0.5">
                         ПИСЬМО + ЛИНТЕР
                       </div>
                     </div>
 
-                    <div className="p-2 flex-1 overflow-y-auto space-y-1.5">
+                    <div className="p-2 flex-1 overflow-y-auto space-y-2">
                       {treeBuckets.drafted.map((v) => {
                         const matched = matchesFilters(v);
                         const lint = runCoverLetterLint(v.coverLetter);
@@ -3693,16 +3732,16 @@ export default function App() {
                               setInspectedId(v.id);
                               setDrawerTab('linter');
                             }}
-                            className={`p-2 rounded-[5px] bg-[#12151C] border border-[#1E2330] hover:border-amber-500/60 cursor-pointer transition-opacity ${
+                            className={`p-2.5 rounded-[5px] bg-[#12151C] border border-[#1E2330] hover:border-amber-500/60 cursor-pointer transition-opacity ${
                               hasActiveFilter && !matched ? 'opacity-25' : 'opacity-100'
                             }`}
                           >
                             <div className="flex items-center justify-between gap-1">
-                              <span className="text-[11.5px] font-semibold text-white truncate">
+                              <span className="text-xs font-semibold text-white truncate">
                                 {v.company}
                               </span>
                               <span
-                                className={`font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${
+                                className={`font-mono text-[10.5px] font-semibold px-2 py-0.5 rounded border shrink-0 ${
                                   lint.isClean
                                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                                     : 'bg-amber-500/15 text-amber-300 border-amber-500/35'
@@ -3713,10 +3752,10 @@ export default function App() {
                                   : `Lint (${lint.totalFlags})`}
                               </span>
                             </div>
-                            <div className="text-[10.5px] text-[#A1A1AA] truncate mt-0.5">
+                            <div className="text-[11px] text-[#A1A1AA] truncate mt-0.5">
                               {v.title}
                             </div>
-                            <div className="font-mono text-[10px] text-[#71717A] mt-0.5">
+                            <div className="font-mono text-[10.5px] text-[#71717A] mt-0.5">
                               ATS {v.atsScore}% · Анти-клише 120–180w
                             </div>
                           </div>
@@ -3726,10 +3765,10 @@ export default function App() {
                   </div>
 
                   {/* -----------------------------------------------------------
-                      NODE 04: ШЛЮЗ HITL & АНКЕТЫ (x:860, y:36, w:246, h:395)
+                      NODE 04: ШЛЮЗ HITL & АНКЕТЫ (x:1110, y:40, w:330, h:550)
                      ----------------------------------------------------------- */}
                   <div
-                    style={{ left: 860, top: 36, width: 246, height: 395 }}
+                    style={{ left: 1110, top: 40, width: 330, height: 550 }}
                     className={`absolute rounded-[6px] bg-[#0D0F13] border transition-colors flex flex-col ${
                       activeTrace?.activeNodeId === 'awaiting_approval'
                         ? 'border-rose-400 ring-1 ring-rose-400/60'
@@ -3737,36 +3776,36 @@ export default function App() {
                     }`}
                   >
                     <span
-                      style={{ top: 150 }}
-                      className="w-3 h-3 rounded-full bg-rose-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
+                      style={{ top: 190 }}
+                      className="w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
                     />
                     <span
-                      style={{ top: 105 }}
-                      className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
+                      style={{ top: 125 }}
+                      className="w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#09090B] absolute -right-1.5 z-10"
                     />
                     <span
-                      style={{ top: 285 }}
-                      className="w-3 h-3 rounded-full bg-slate-400 border-2 border-[#09090B] absolute -right-1.5 z-10"
+                      style={{ top: 360 }}
+                      className="w-3.5 h-3.5 rounded-full bg-slate-400 border-2 border-[#09090B] absolute -right-1.5 z-10"
                     />
 
-                    <div className="px-3 py-2 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
+                    <div className="px-3 py-2.5 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
+                      <div className="flex items-center justify-between font-mono text-[11px]">
                         <span className="inline-flex items-center gap-1.5 text-rose-400 font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
                           NODE-04 · HITL-GATE
                         </span>
                         <span className="text-rose-300 font-bold tabular-nums">
                           {treeBuckets.awaiting_approval.length} в шлюзе
                         </span>
                       </div>
-                      <div className="text-xs font-bold text-white mt-0.5">
+                      <div className="text-sm font-bold text-white mt-0.5">
                         ШЛЮЗ HITL & АНКЕТЫ
                       </div>
                     </div>
 
                     {/* Auto-Pilot Rule Toggle Bar */}
-                    <div className="px-2.5 py-1.5 border-b border-[#1E2330] bg-[#10131A] flex items-center justify-between gap-2">
-                      <span className="font-mono text-[10px] text-[#A1A1AA] truncate">
+                    <div className="px-3 py-2 border-b border-[#1E2330] bg-[#10131A] flex items-center justify-between gap-2">
+                      <span className="font-mono text-[11px] text-[#A1A1AA] truncate">
                         Авто-отклик ≥ 88% без анкеты
                       </span>
                       <button
@@ -3780,7 +3819,7 @@ export default function App() {
                             'HITL-GATE'
                           );
                         }}
-                        className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold border transition-colors cursor-pointer shrink-0 ${
+                        className={`px-2.5 py-0.5 rounded font-mono text-[10.5px] font-bold border transition-colors cursor-pointer shrink-0 ${
                           autoPilotHighScore
                             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                             : 'bg-[#12151C] text-[#71717A] border-[#1E2330] hover:text-white'
@@ -3793,7 +3832,7 @@ export default function App() {
                     {/* Awaiting Approval Cards */}
                     <div className="p-2 flex-1 overflow-y-auto space-y-2">
                       {treeBuckets.awaiting_approval.length === 0 ? (
-                        <div className="p-4 rounded border border-dashed border-[#1E2330] text-center font-mono text-[10.5px] text-[#71717A]">
+                        <div className="p-4 rounded border border-dashed border-[#1E2330] text-center font-mono text-[11px] text-[#71717A]">
                           Шлюз HITL пуст — все решения приняты
                         </div>
                       ) : (
@@ -3812,7 +3851,7 @@ export default function App() {
                                   isHiddenRes || pendingQs > 0 ? 'questions' : 'battle'
                                 );
                               }}
-                              className={`p-2 rounded-[5px] bg-[#12151C] border transition-all cursor-pointer ${
+                              className={`p-2.5 rounded-[5px] bg-[#12151C] border transition-all cursor-pointer ${
                                 isHiddenRes
                                   ? 'border-rose-500/60'
                                   : pendingQs > 0
@@ -3821,41 +3860,41 @@ export default function App() {
                               } ${hasActiveFilter && !matched ? 'opacity-25' : 'opacity-100'}`}
                             >
                               <div className="flex items-center justify-between gap-1">
-                                <span className="text-[11.5px] font-bold text-white truncate">
+                                <span className="text-xs font-bold text-white truncate">
                                   {v.company}
                                 </span>
-                                <span className="font-mono text-[10px] font-bold text-emerald-400 tabular-nums shrink-0">
+                                <span className="font-mono text-[10.5px] font-bold text-emerald-400 tabular-nums shrink-0">
                                   {v.atsScore}% · {r?.shortCode}
                                 </span>
                               </div>
 
-                              <div className="text-[10.5px] text-[#A1A1AA] truncate mt-0.5">
+                              <div className="text-[11px] text-[#A1A1AA] truncate mt-0.5">
                                 {v.title}
                               </div>
 
-                              <div className="mt-1">
+                              <div className="mt-1.5">
                                 {isHiddenRes ? (
-                                  <span className="inline-block font-mono text-[9.5px] font-semibold px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/35">
+                                  <span className="inline-block font-mono text-[10px] font-semibold px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/35">
                                     ⚠ Резюме {r.shortCode} скрыто на hh.ru
                                   </span>
                                 ) : pendingQs > 0 ? (
-                                  <span className="inline-block font-mono text-[9.5px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/35">
+                                  <span className="inline-block font-mono text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/35">
                                     Анкета: {v.questions.length} вопр.
                                   </span>
                                 ) : (
-                                  <span className="inline-block font-mono text-[9.5px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+                                  <span className="inline-block font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
                                     Готово к отправке
                                   </span>
                                 )}
                               </div>
 
                               <div
-                                className="mt-2 pt-1.5 border-t border-[#1E2330] flex items-center justify-between gap-1"
+                                className="mt-2.5 pt-2 border-t border-[#1E2330] flex items-center justify-between gap-1.5"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <button
                                   onClick={() => handleApproveVacancy(v.id)}
-                                  className={`flex-1 inline-flex items-center justify-center gap-1 py-1 rounded-[4px] text-[10.5px] font-bold border transition-colors cursor-pointer ${
+                                  className={`flex-1 inline-flex items-center justify-center gap-1 py-1.5 rounded-[4px] text-xs font-bold border transition-colors cursor-pointer ${
                                     isHiddenRes
                                       ? 'bg-rose-500/15 border-rose-500/40 text-rose-300 hover:bg-rose-500/25'
                                       : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25'
@@ -3866,7 +3905,7 @@ export default function App() {
 
                                 <button
                                   onClick={() => handleSkipVacancy(v.id)}
-                                  className="px-2 py-1 rounded-[4px] text-[10.5px] font-semibold bg-[#181C26] hover:bg-rose-500/15 text-[#A1A1AA] hover:text-rose-300 border border-[#242A3A] transition-colors cursor-pointer"
+                                  className="px-2.5 py-1.5 rounded-[4px] text-xs font-semibold bg-[#181C26] hover:bg-rose-500/15 text-[#A1A1AA] hover:text-rose-300 border border-[#242A3A] transition-colors cursor-pointer"
                                 >
                                   ✕ Пропуск
                                 </button>
@@ -3882,7 +3921,7 @@ export default function App() {
                       NODE 05A (TOP RIGHT TERMINAL): ВЫХОД A: ОТКЛИК & HR-ВОРОНКА
                      ----------------------------------------------------------- */}
                   <div
-                    style={{ left: 1168, top: 26, width: 196, height: 276 }}
+                    style={{ left: 1510, top: 30, width: 240, height: 320 }}
                     className={`absolute rounded-[6px] bg-[#0D0F13] border transition-colors flex flex-col ${
                       activeTrace?.activeNodeId === 'approved'
                         ? 'border-emerald-400 ring-1 ring-emerald-400/60'
@@ -3890,23 +3929,23 @@ export default function App() {
                     }`}
                   >
                     <span
-                      style={{ top: 115 }}
-                      className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
+                      style={{ top: 135 }}
+                      className="w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
                     />
 
-                    <div className="px-2.5 py-2 border-b border-[#1E2330] bg-emerald-950/25 rounded-t-[6px]">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
+                    <div className="px-3 py-2.5 border-b border-[#1E2330] bg-emerald-950/25 rounded-t-[6px]">
+                      <div className="flex items-center justify-between font-mono text-[11px]">
                         <span className="text-emerald-400 font-bold">EXIT-05A · DISPATCH</span>
                         <span className="text-emerald-300 font-bold tabular-nums">
                           {treeBuckets.outbound.length}
                         </span>
                       </div>
-                      <div className="text-xs font-bold text-emerald-300 mt-0.5">
+                      <div className="text-sm font-bold text-emerald-300 mt-0.5">
                         ВЫХОД A: ОТКЛИК
                       </div>
                     </div>
 
-                    <div className="p-2 flex-1 overflow-y-auto space-y-1.5">
+                    <div className="p-2 flex-1 overflow-y-auto space-y-2">
                       {treeBuckets.outbound.map((v) => {
                         const matched = matchesFilters(v);
                         const isSent = v.stage === 'sent';
@@ -3917,28 +3956,28 @@ export default function App() {
                               setInspectedId(v.id);
                               setDrawerTab('battle');
                             }}
-                            className={`p-2 rounded-[5px] bg-[#12151C] border border-[#1E2330] hover:border-emerald-500/50 cursor-pointer transition-opacity ${
+                            className={`p-2.5 rounded-[5px] bg-[#12151C] border border-[#1E2330] hover:border-emerald-500/50 cursor-pointer transition-opacity ${
                               hasActiveFilter && !matched ? 'opacity-25' : 'opacity-100'
                             }`}
                           >
                             <div className="flex items-center justify-between gap-1">
-                              <span className="text-[11px] font-bold text-white truncate">
+                              <span className="text-xs font-bold text-white truncate">
                                 {v.company}
                               </span>
-                              <span className="font-mono text-[9.5px] text-emerald-400 shrink-0">
+                              <span className="font-mono text-[10.5px] text-emerald-400 shrink-0">
                                 {v.atsScore}%
                               </span>
                             </div>
-                            <div className="text-[10px] text-[#A1A1AA] truncate mt-0.5">
+                            <div className="text-[11px] text-[#A1A1AA] truncate mt-0.5">
                               {v.title}
                             </div>
-                            <div className="mt-1">
+                            <div className="mt-1.5">
                               {isSent ? (
-                                <span className="inline-block font-mono text-[9.5px] font-semibold px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                                <span className="inline-block font-mono text-[10px] font-semibold px-2 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/30">
                                   {v.employerBadge || 'Доставлено'}
                                 </span>
                               ) : (
-                                <span className="inline-block font-mono text-[9.5px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                <span className="inline-block font-mono text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                                   В очереди отправки
                                 </span>
                               )}
@@ -3953,7 +3992,7 @@ export default function App() {
                       NODE 05B (BOTTOM RIGHT TERMINAL): ВЫХОД B: ПРОПУСК
                      ----------------------------------------------------------- */}
                   <div
-                    style={{ left: 1168, top: 328, width: 196, height: 276 }}
+                    style={{ left: 1510, top: 380, width: 240, height: 350 }}
                     className={`absolute rounded-[6px] bg-[#0D0F13] border transition-colors flex flex-col ${
                       activeTrace?.activeNodeId === 'skipped'
                         ? 'border-slate-400 ring-1 ring-slate-400/60'
@@ -3961,22 +4000,22 @@ export default function App() {
                     }`}
                   >
                     <span
-                      style={{ top: 98 }}
-                      className="w-3 h-3 rounded-full bg-slate-400 border-2 border-[#09090B] absolute -left-1.5 z-10"
+                      style={{ top: 80 }}
+                      className="w-3.5 h-3.5 rounded-full bg-slate-400 border-2 border-[#09090B] absolute -left-1.5 z-10"
                     />
                     <span
-                      style={{ top: 203 }}
-                      className="w-3 h-3 rounded-full bg-rose-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
+                      style={{ top: 260 }}
+                      className="w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-[#09090B] absolute -left-1.5 z-10"
                     />
 
-                    <div className="px-2.5 py-2 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
+                    <div className="px-3 py-2.5 border-b border-[#1E2330] bg-[#12151C] rounded-t-[6px]">
+                      <div className="flex items-center justify-between font-mono text-[11px]">
                         <span className="text-slate-400 font-bold">EXIT-05B · PRUNED</span>
                         <span className="text-slate-300 font-bold tabular-nums">
                           {treeBuckets.skipped.length}
                         </span>
                       </div>
-                      <div className="text-xs font-bold text-slate-300 mt-0.5">
+                      <div className="text-sm font-bold text-slate-300 mt-0.5">
                         ВЫХОД B: ПРОПУСК
                       </div>
                     </div>
@@ -4813,9 +4852,29 @@ function VacancyInspectionDrawer({
 
   // Rank all 6 loaded resumes for Tab 1: Multi-Resume ATS Battle
   const rankedResumes = useMemo(() => {
+    if (Array.isArray(vacancy.comparison) && vacancy.comparison.length > 0) {
+      return vacancy.comparison.map((c, idx) => {
+        const found = resumes.find((r) => r.id === c.resumeId) || {
+          id: c.resumeId,
+          title: c.name || `Резюме ${idx + 1}`,
+          shortCode: `R${idx + 1}`,
+          filterLabel: c.name || `Резюме ${idx + 1}`,
+          visibility: 'public',
+        };
+        return {
+          resume: found,
+          overall: c.overall ?? 50,
+          hardSkills: c.hardCoverage ?? c.overall ?? 50,
+          domain: c.overall ?? 50,
+          seniority: c.overall ?? 50,
+          rank: c.rank ?? (idx + 1),
+          recommended: Boolean(c.recommended || idx === 0),
+        };
+      });
+    }
     return resumes
       .map((r) => {
-        const scores = vacancy.resumeScores[r.id] || {
+        const scores = vacancy.resumeScores?.[r.id] || {
           overall: 50,
           hardSkills: 50,
           domain: 50,
@@ -4824,7 +4883,7 @@ function VacancyInspectionDrawer({
         return { resume: r, ...scores };
       })
       .sort((a, b) => b.overall - a.overall);
-  }, [resumes, vacancy.resumeScores]);
+  }, [resumes, vacancy.comparison, vacancy.resumeScores]);
 
   const pendingQsCount = (vacancy.questions || []).filter((q) => q.needsReview).length;
 
@@ -5102,6 +5161,173 @@ function VacancyInspectionDrawer({
                   );
                 })}
               </div>
+
+              {/* Deep ATS Evidence-Based Breakdown (Real LLM Payload) */}
+              {vacancy.atsPayload && (
+                <div className="mt-4 pt-3 border-t border-[#222634] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                      Глубокий ATS-разбор требований
+                    </span>
+                    <span className="font-mono text-[11px] text-[#A1A1AA]">
+                      Hard Coverage:{' '}
+                      <strong className="text-emerald-400">
+                        {vacancy.atsPayload.hard_requirements_coverage_percent ?? 0}%
+                      </strong>
+                    </span>
+                  </div>
+
+                  {/* Honest Gap Warning Box */}
+                  {vacancy.atsPayload.honest_gap_warning && (
+                    <div className="rounded-[6px] p-3 bg-amber-500/10 border border-amber-500/35 text-xs space-y-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-400">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>Честное заключение по критическим разрывам</span>
+                      </div>
+                      <p className="leading-relaxed text-[11.5px] text-amber-200/90 whitespace-pre-wrap">
+                        {vacancy.atsPayload.honest_gap_warning}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Hard Requirements Table/List */}
+                  {Array.isArray(vacancy.atsPayload.hard_requirements) &&
+                    vacancy.atsPayload.hard_requirements.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="text-[10.5px] font-mono text-[#71717A] uppercase">
+                          Обязательные требования ({vacancy.atsPayload.hard_requirements.length}):
+                        </div>
+                        <div className="space-y-1.5">
+                          {vacancy.atsPayload.hard_requirements.map((req, rIdx) => {
+                            const isCovered = req.status === 'covered';
+                            const isPartial = req.status === 'partially_covered';
+                            return (
+                              <div
+                                key={rIdx}
+                                className="p-2.5 rounded-[5px] bg-[#141720] border border-[#222634] text-xs space-y-1"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <span className="font-medium text-white">{req.requirement}</span>
+                                  <span
+                                    className={`shrink-0 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                      isCovered
+                                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                        : isPartial
+                                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                        : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                                    }`}
+                                  >
+                                    {isCovered
+                                      ? '✓ Покрыто'
+                                      : isPartial
+                                      ? '⚠ Частично'
+                                      : '✕ Отсутствует'}
+                                  </span>
+                                </div>
+                                {req.matched_as && (
+                                  <div className="text-[11px] text-[#A1A1AA]">
+                                    <span className="text-indigo-400 font-mono">В резюме: </span>
+                                    {req.matched_as}
+                                  </div>
+                                )}
+                                {req.note && (
+                                  <div className="text-[10.5px] text-amber-300/80 italic font-mono">
+                                    Замечание: {req.note}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Nice to Have list */}
+                  {Array.isArray(vacancy.atsPayload.nice_to_have) &&
+                    vacancy.atsPayload.nice_to_have.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="text-[10.5px] font-mono text-[#71717A] uppercase">
+                          Желательные требования (Nice to Have):
+                        </div>
+                        <div className="space-y-1.5">
+                          {vacancy.atsPayload.nice_to_have.map((nth, nIdx) => {
+                            const isCovered = nth.status === 'covered';
+                            return (
+                              <div
+                                key={nIdx}
+                                className="p-2 rounded-[5px] bg-[#141720] border border-[#222634] text-xs flex items-center justify-between gap-2"
+                              >
+                                <span className="text-[#D4D4D8]">{nth.requirement}</span>
+                                <span
+                                  className={`shrink-0 font-mono text-[9.5px] px-1.5 py-0.5 rounded border ${
+                                    isCovered
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                                      : 'bg-[#181C26] text-[#71717A] border-[#242A3A]'
+                                  }`}
+                                >
+                                  {isCovered ? '✓ Плюс' : '—'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Critical Gaps list */}
+                  {Array.isArray(vacancy.atsPayload.critical_gaps) &&
+                    vacancy.atsPayload.critical_gaps.length > 0 && (
+                      <div className="rounded-[6px] p-3 bg-rose-500/10 border border-rose-500/30 text-xs space-y-1.5">
+                        <div className="font-bold text-rose-400 font-mono text-[11px]">
+                          Блокирующие барьеры (Critical Gaps):
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-rose-200/90 text-[11.5px]">
+                          {vacancy.atsPayload.critical_gaps.map((cg, cgIdx) => (
+                            <li key={cgIdx}>{cg}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                  {/* Actionable Resume Edits */}
+                  {Array.isArray(vacancy.atsPayload.actionable_edits) &&
+                    vacancy.atsPayload.actionable_edits.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-[10.5px] font-mono text-[#71717A] uppercase">
+                          Рекомендации по правкам резюме (Actionable Edits):
+                        </div>
+                        <div className="space-y-2">
+                          {vacancy.atsPayload.actionable_edits.map((edit, eIdx) => (
+                            <div
+                              key={eIdx}
+                              className="p-3 rounded-[6px] bg-[#141720] border border-indigo-500/30 text-xs space-y-1.5"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-[10.5px] font-bold text-indigo-400 px-2 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30">
+                                  Вставить в: {edit.resume_section}
+                                </span>
+                                <span className="font-mono text-[10px] text-emerald-400">
+                                  ✓ Без выдуманного опыта
+                                </span>
+                              </div>
+                              <div className="text-[#A1A1AA] text-[11px]">
+                                <strong className="text-white">Закрываемый разрыв:</strong> {edit.current_gap}
+                              </div>
+                              <div className="p-2 rounded bg-[#0D0F13] border border-[#222634] font-mono text-[11px] text-[#E4E4E7] leading-relaxed select-all">
+                                «{edit.suggested_text}»
+                              </div>
+                              {edit.honesty_check && (
+                                <div className="text-[10px] text-[#71717A] italic">
+                                  Проверка правдивости: {edit.honesty_check}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                </div>
+              )}
             </div>
           )}
 
@@ -5178,6 +5404,65 @@ function VacancyInspectionDrawer({
                   </tfoot>
                 </table>
               </div>
+
+              {/* HR Strategic Dossier from DeepSeek Fit Check */}
+              {vacancy.fitPayload && (
+                <div className="mt-4 pt-3 border-t border-[#222634] space-y-3">
+                  {vacancy.fitPayload.reasoning && (
+                    <div className="p-3 rounded-[6px] bg-[#141720] border border-[#222634] text-xs space-y-1">
+                      <div className="font-mono text-[11px] font-bold text-sky-400">
+                        Заключение HR-консультанта (Reasoning):
+                      </div>
+                      <p className="text-[#E4E4E7] leading-relaxed text-[11.5px]">
+                        {vacancy.fitPayload.reasoning}
+                      </p>
+                    </div>
+                  )}
+
+                  {Array.isArray(vacancy.fitPayload.selling_points) &&
+                    vacancy.fitPayload.selling_points.length > 0 && (
+                      <div className="p-3 rounded-[6px] bg-[#141720] border border-emerald-500/30 text-xs space-y-1.5">
+                        <div className="font-mono text-[11px] font-bold text-emerald-400">
+                          Сильные стороны кандидата для этой вакансии:
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-emerald-200/90 text-[11.5px]">
+                          {vacancy.fitPayload.selling_points.map((sp, spIdx) => (
+                            <li key={spIdx}>{sp}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                  {Array.isArray(vacancy.fitPayload.flags) &&
+                    vacancy.fitPayload.flags.length > 0 && (
+                      <div className="p-3 rounded-[6px] bg-[#141720] border border-rose-500/30 text-xs space-y-1.5">
+                        <div className="font-mono text-[11px] font-bold text-rose-400">
+                          Факторы риска и нестыковки (Flags):
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-rose-200/90 text-[11.5px]">
+                          {vacancy.fitPayload.flags.map((fl, flIdx) => (
+                            <li key={flIdx}>{fl}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                  {(vacancy.fitPayload.booster || vacancy.fitPayload.effort_minutes) && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-[6px] bg-[#12151C] border border-[#1E2330] text-xs font-mono">
+                      {vacancy.fitPayload.booster && (
+                        <span className="text-amber-300">
+                          Совет по бусту: {vacancy.fitPayload.booster.text} (+{vacancy.fitPayload.booster.delta})
+                        </span>
+                      )}
+                      {vacancy.fitPayload.effort_minutes && (
+                        <span className="text-[#71717A]">
+                          Оценка времени кастомного отклика: <strong className="text-white">{vacancy.fitPayload.effort_minutes} мин</strong>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
