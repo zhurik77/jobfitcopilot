@@ -1,20 +1,25 @@
+version: '3.8'
+
 services:
-  jobfit-server:
+  server:
     build:
       context: .
       dockerfile: server/Dockerfile
     ports:
-      # Только loopback: панель и MCP не должны быть видны из сети.
-      - "127.0.0.1:8765:8765"
+      - "3001:3001"
     environment:
-      DB_PATH: /data/jobfit.db
-      WEBBRIDGE_URL: http://host.docker.internal:10086
-      CDEK_LLM_URL: http://host.docker.internal:8000/v1
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_PATH=/data/jobfit.db
     volumes:
       - jobfit-data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/healthz', r => {process.exit(r.statusCode===200?0:1)})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   jobfit-data:

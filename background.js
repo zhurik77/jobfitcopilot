@@ -27,6 +27,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     handle(matchAts(msg.vacancy, msg.fullResume), sendResponse);
     return true;
   }
+  if (msg.type === 'SUBMIT_ATS_RESPONSE') {
+    handle(submitAtsResponse(msg.vacancy, msg.letter), sendResponse);
+    return true;
+  }
 });
 
 // Единый формат ответа панели: { ok: true, result } | { ok: false, code, message }.
@@ -203,4 +207,53 @@ async function matchAts(vacancy, fullResume) {
   const parsed = parseModelJson(raw);
   if (parsed) return { ok: true, result: parsed };
   return { ok: false, code: 'PARSE_ERROR', message: raw.slice(0, 300) };
+}
+
+/**
+ * Отправляет отклик на вакансию через content-скрипт активной вкладки.
+ * Сначала пытается найти уже внедрённый скрипт (chrome.tabs.sendMessage),
+ * при ошибке внедряет скрипт через chrome.scripting.executeScript.
+ */
+async function submitAtsResponse(vacancy, letter) {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tabs || !tabs.length) {
+    return { ok: false, code: 'NO_TAB', message: 'Нет активной вкладки с вакансией' };
+  }
+  const tab = tabs[0];
+  if (!tab.url || tab.url === 'chrome://newtab/') {
+    return { ok: false, code: 'BAD_URL', message: 'Вкладка не содержит страницу вакансии' };
+  }
+
+  // Пробуем отправить сообщение уже внедрённому content-скрипту
+  try {
+    const reply = await chrome.tabs.sendMessage(tab.id, {
+      type: 'FILL_AND_SUBMIT',
+      vacancy,
+      letter
+    });
+    if (reply && reply.ok) return reply;
+    if (reply && reply.code === 'UNSUPPORTED_SITE') return reply;
+    if (reply) return reply;
+  } catch (_) {
+    // Content-скрипт не внедрён — внедряем универсальный
+  }
+
+  // Внедряем скрипт отклика для сайта
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['content-scripts/submit-ats.js']
+    });
+    if (results && results[0] && results[0].result) return results[0].result;
+    // Если скрипт внедрён, отправляем сообщение
+    const reply2 = await chrome.tabs.sendMessage(tab.id, {
+      type: 'FILL_AND_SUBMIT',
+      vacancy,
+      letter
+    });
+    if (reply2 && reply2.ok) return reply2;
+    return reply2 || { ok: false, code: 'NO_REPLY', message: 'Скрипт отклика не ответил' };
+  } catch (e) {
+    return { ok: false, code: 'INJECT_FAILED', message: 'Не удалось внедрить скрипт: ' + (e.message || String(e)) };
+  }
 }

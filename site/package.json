@@ -1,7 +1,7 @@
 {
   "name": "jobfitcopilot-site",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "Лендинг Job Fit Copilot. Собирается в ../docs, откуда его отдаёт GitHub Pages.",
   "scripts": {

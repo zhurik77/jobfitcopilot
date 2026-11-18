@@ -23,6 +23,9 @@
   <a href="https://github.com/zhurik77/jobfitcopilot/pulls">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat" alt="PRs Welcome">
   </a>
+  <a href="https://t.me/jobfitcopilot_chat">
+    <img src="https://img.shields.io/badge/Telegram-@jobfitcopilot__chat-26A5E4?style=flat&logo=telegram" alt="Telegram">
+  </a>
 </p>
 
 <p align="center">
@@ -43,6 +46,50 @@
 <p align="center">
   💛 <b>Поддержать проект:</b> <a href="https://www.tbank.ru/cf/1cYvs7KjikV" target="_blank" rel="noopener">https://www.tbank.ru/cf/1cYvs7KjikV</a>
 </p>
+
+---
+
+## 🌟 OSS Growth & Community
+
+<p align="center">
+  <a href="https://t.me/jobfitcopilot_chat">
+    <img src="https://img.shields.io/badge/Telegram-@jobfitcopilot__chat-26A5E4?style=for-the-badge&logo=telegram" alt="Telegram">
+  </a>
+  <a href="https://github.com/zhurik77/jobfitcopilot/stargazers">
+    <img src="https://img.shields.io/github/stars/zhurik77/jobfitcopilot?style=for-the-badge&logo=github&color=yellow" alt="Stars">
+  </a>
+  <a href="https://github.com/zhurik77/jobfitcopilot/forks">
+    <img src="https://img.shields.io/github/forks/zhurik77/jobfitcopilot?style=for-the-badge&logo=github&color=blue" alt="Forks">
+  </a>
+</p>
+
+### Почему стоит поставить звезду ⭐
+
+- **Вы поддерживаете open-source альтернативу** дорогим HR-tech инструментам. Job Fit Copilot бесплатен и останется таким.
+- **Ваша звезда — сигнал другим.** Чем больше звёзд, тем проще привлекать контрибьюторов, тем быстрее проект развивается.
+- **Вы голосуете за приватность.** Мы единственное расширение для ATS-анализа, которое не собирает данные пользователей. Никакого бэкенда, никакого трекинга, никаких скрытых API.
+- **Доступ к сообществу.** Подписчики GitHub первыми узнают о новых релизах, фичах и бета-версиях.
+- **Это занимает 10 секунд.** Правда. Нажмите кнопку ⭐ вверху страницы — и вы уже часть сообщества.
+
+### Нам нужна ваша помощь 🤝
+
+Job Fit Copilot делают люди, а не корпорация. Вот где ваши навыки пригодятся прямо сейчас:
+
+| Роль | Что нужно делать |
+|------|------------------|
+| **HR-эксперты** 🧑‍💼 | Верифицировать качество ATS-анализа, подсказывать, какие факторы важнее для реального найма, тестировать на реальных кейсах |
+| **Разработчики** 🧑‍💻 | Добавлять адаптеры для новых сайтов с вакансиями, улучшать алгоритм скоринга, писать тесты, ревьюить PR |
+| **Переводчики** 🌍 | Переводить интерфейс на новые языки — см. [TRANSLATION_GUIDE.md](docs/TRANSLATION_GUIDE.md) |
+| **Тестировщики** 🧪 | Находить edge cases, при которых ATS-анализ работает некорректно, писать тесты для редких сценариев |
+| **Дизайнеры** 🎨 | Улучшать UI/UX расширения, помогать с дизайн-системой |
+
+Присоединяйтесь к [Telegram-чату](https://t.me/jobfitcopilot_chat) — там мы координируем работу и обсуждаем планы.
+
+### Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=zhurik77/jobfitcopilot&type=Date)](https://star-history.com/#zhurik77/jobfitcopilot&Date)
+
+---
 
 <p align="center">
   <a href="https://zhurik77.github.io/jobfitcopilot">Сайт</a> ·
@@ -270,6 +317,35 @@ npm run site     # собрать лендинг из site/ в docs/ (GitHub Pag
 ## 👥 Приглашаем экспертов HR
 
 Проекту нужны консультации HR-специалистов и рекрутеров для улучшения ATS-анализа. Если вы работаете в HR или управляете наймом — присоединяйтесь к [Telegram-чату](https://t.me/jobfitcopilot_chat)!
+
+## ⭐ Почему стоит поставить звезду
+
+Job Fit Copilot — открытый проект, который делает ATS-анализ и фит-оценку вакансий доступными каждому. Поставив звезду, вы:
+
+- 🚀 **Помогаете проекту расти** — больше звёзд = больше доверия = больше контрибьюторов
+- 👀 **Получаете обновления** — звезда = подписка на релизы в ленте GitHub
+- 🌍 **Поддерживаете open-source в СНГ** — показываете, что русскоязычные OSS-проекты нужны сообществу
+- 💬 **Привлекаете внимание HR-экспертов** — чем заметнее проект, тем быстрее найдём экспертов для калибровки ATS
+
+**[Поставить звезду →](https://github.com/zhurik77/jobfitcopilot)**
+
+## 🤝 Нам нужна ваша помощь
+
+Проект растёт, и мы ищем:
+
+| Роль | Что делать |
+|------|-----------|
+| **HR-эксперт** | Верифицировать ATS-анализ, калибровать скоринг, улучшать промпты |
+| **Разработчик** | Новые адаптеры сайтов, улучшение autopilot, edge cases |
+| **Тестировщик** | Крайние случаи, регрессия, UX-тестирование |
+| **Переводчик** | Английская локализация интерфейса и документации |
+| **Промпт-инженер** | Улучшение качества генерации писем и ATS-аудита |
+
+Присоединяйтесь к [Telegram-чату](https://t.me/jobfitcopilot_chat) — обсудим, как вы можете помочь.
+
+## 📈 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=zhurik77/jobfitcopilot&type=Date)](https://star-history.com/#zhurik77/jobfitcopilot&Date)
 
 ## 💛 Поддержка проекта
 
