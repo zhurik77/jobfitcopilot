@@ -1,0 +1,48 @@
+name: Welcome First-Time Contributor
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  welcome:
+    if: github.event.pull_request.merged == true && github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const login = pr.user.login;
+
+            // Thank the contributor
+            await github.rest.issues.createComment({
+              issue_number: pr.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: [
+                `🎉 Thank you @${login} for your first contribution to **${context.repo.repo}**!`,
+                '',
+                'We really appreciate you taking the time to help improve the project.',
+                'Here are a few things you can do next:',
+                '',
+                '- Browse the [open issues](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/issues) to find another task',
+                '- Check the [project roadmap](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/blob/master/docs/ROADMAP.md) for upcoming features',
+                '- Join the discussion in existing issues and PRs',
+                '',
+                'Welcome aboard! 🚀'
+              ].join('\n')
+            });
+
+            // Add contributor label
+            await github.rest.issues.addLabels({
+              issue_number: pr.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['contributor']
+            });

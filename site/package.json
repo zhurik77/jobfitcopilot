@@ -1,17 +1,19 @@
 {
   "name": "jobfitcopilot-site",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "Лендинг Job Fit Copilot. Собирается в ../docs, откуда его отдаёт GitHub Pages.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:docs": "vite build --outDir ../docs --base /jobfitcopilot/",
     "preview": "vite preview"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^14.14.0",
     "lucide-react": "^0.469.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

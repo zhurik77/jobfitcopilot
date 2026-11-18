@@ -2025,9 +2025,122 @@
       checkBtn.click();
     };
 
+    // Показываем кнопку отклика, если активная вкладка — поддерживаемый сайт
+    const submitBtn = $('btn-ats-submit');
+    const source = currentVacancy.source || '';
+    if (['hh.ru', 'linkedin', 'upwork'].includes(source)) {
+      submitBtn.hidden = false;
+    } else {
+      submitBtn.hidden = true;
+    }
+
     $('ats-result').hidden = false;
     return id;
   }
+
+  // ---------- отклик на вакансию (submit) ----------
+
+  let atsSubmitLock = false;
+
+  $('btn-ats-submit').addEventListener('click', async () => {
+    if (atsSubmitLock) return;
+    clearAtsError();
+
+    const keyCheck = await hasApiKeyForActiveModel();
+    if (!keyCheck.ok) { showNoApiKey(keyCheck.modelKey); return; }
+
+    const btn = $('btn-ats-submit');
+    const statusEl = $('ats-submit-status');
+
+    atsSubmitLock = true;
+    btn.disabled = true;
+    statusEl.hidden = false;
+    statusEl.textContent = 'Готовлю сопроводительное письмо...';
+
+    try {
+      // 1. Получаем или генерируем сопроводительное письмо
+      let letterText = $('letter-text').value.trim();
+      if (!letterText) {
+        // Генерируем письмо, если его ещё нет
+        const { letterLang } = await chrome.storage.local.get('letterLang');
+        let lang = letterLang || 'auto';
+        if (lang === 'auto') {
+          lang = currentVacancy.source === 'hh.ru' ? 'ru'
+            : currentVacancy.source === 'linkedin' || currentVacancy.source === 'upwork' ? 'en'
+            : 'ru';
+        }
+
+        const resumeText = $('ats-inline-resume') ? $('ats-inline-resume').value.trim() : '';
+        // ensureSavedResumes вызывается ради сайд-эффекта (миграция legacy-профилей)
+        await JFC.ensureSavedResumes();
+        if (!resumeText) {
+          showAtsError('Нет текста резюме — выбери резюме в поле выше.');
+          return;
+        }
+
+        statusEl.textContent = 'Пишу сопроводительное письмо...';
+        const letterResp = await sendWithRetry({
+          type: 'WRITE_LETTER',
+          vacancy: currentVacancy,
+          profile: resumeText,
+          sellingPoints: [],
+          flags: [],
+          lang,
+          tone: ($('letter-tone') && $('letter-tone').value) || 'neutral'
+        }, null, '');
+
+        if (!letterResp.ok) {
+          showAtsError('Не удалось сгенерировать письмо: ' + (letterResp.message || 'ошибка'));
+          return;
+        }
+        letterText = letterResp.result;
+      }
+
+      // 2. Отправляем отклик
+      statusEl.textContent = 'Отправляю отклик на сайт вакансии...';
+
+      const resp = await chrome.runtime.sendMessage({
+        type: 'SUBMIT_ATS_RESPONSE',
+        vacancy: currentVacancy,
+        letter: letterText,
+        resumeId: activeAtsResumeId
+      });
+
+      if (!resp || !resp.ok) {
+        showAtsError('Ошибка отклика: ' + ((resp && resp.message) || 'расширение не ответило'));
+        return;
+      }
+
+      statusEl.textContent = 'Отклик отправлен!';
+      flashButton(btn, 'Отправлено!');
+
+      // Сохраняем в историю
+      const entry = {
+        id: makeCheckId(),
+        type: 'ats-submit',
+        title: currentVacancy.title || 'Вакансия',
+        source: currentVacancy.source || '',
+        url: currentVacancy.url || '',
+        letter: letterText,
+        submittedAt: Date.now(),
+        result: resp
+      };
+      const { history } = await chrome.storage.local.get('history');
+      const items = Array.isArray(history) ? history : [];
+      items.unshift(entry);
+      await chrome.storage.local.set({ history: items.slice(0, HISTORY_LIMIT) });
+      const { submitsCount } = await chrome.storage.local.get('submitsCount');
+      await chrome.storage.local.set({ submitsCount: (submitsCount || 0) + 1 });
+
+      setTimeout(() => { statusEl.hidden = true; }, 5000);
+    } catch (e) {
+      showAtsError('Ошибка при отклике: ' + (e.message || 'неизвестная ошибка'));
+      console.error(e);
+    } finally {
+      atsSubmitLock = false;
+      btn.disabled = false;
+    }
+  });
 
   function renderAtsReqList(wrap, reqs) {
     wrap.textContent = '';

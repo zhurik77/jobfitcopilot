@@ -2,7 +2,24 @@
 
 All notable changes to Job Fit Copilot will be documented in this file.
 
-## [Unreleased]
+## [0.6.0] - 2025-07-19
+
+### Added
+- **CORS, Security Headers, Rate Limiting.** Сервер теперь отправляет CORS-заголовки,
+  security-заголовки (X-Content-Type-Options, X-Frame-Options, Referrer-Policy),
+  in-memory rate limiter (100 запросов/мин/IP) и X-Request-Id для traceability.
+- **Structured JSON logging.** Все запросы логируются в JSON с полями timestamp,
+  level, requestId, method, url, status, durationMs.
+- **+20 новых тестов.** Покрытие scoring (computeFitScore, rankResumeMatches) и
+  resume-summary (extractResumeSummary) — граничные случаи, null safety, округление.
+- **FUNDING.yml.** Добавлен файл поддержки проекта.
+- **docs/ROADMAP.md.** Дорожная карта развития проекта.
+
+### Changed
+- **index.js рефакторинг.** Вынесены CORS, security headers, rate limiter и
+  structured logger в отдельные модули. OPTIONS-запросы обрабатываются.
+- **README обновлён.** Добавлены OSS-бейджи, архитектурная диаграмма, roadmap,
+  ссылки на сообщество.
 
 ### Fixed
 - **Сайт проекта не собирался.** GitHub Pages прогонял `docs/` через Jekyll, и
