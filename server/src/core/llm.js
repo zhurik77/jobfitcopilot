@@ -1,6 +1,6 @@
-// Клиент для подключения к локальному OpenAI-совместимому прокси FastAPI_CDEKLLM.
+// Клиент для подключения к OpenAI-совместимому LLM-ендпоинту.
 // Позволяет серверу автономно выполнять тяжелые LLM-задачи (ATS-матчинг, Fit-анализ,
-// генерацию писем без клише и ответы на вопросы работодателя) без внешних платных API.
+// генерацию писем без клише и ответы на вопросы работодателя) через кастомный endpoint.
 import { PROMPTS, letterPrompt } from './prompts.js';
 import { lintLetter } from './letter-lint.js';
 import { computeFitScore, rankResumeMatches } from './scoring.js';
@@ -14,7 +14,7 @@ export class LlmError extends Error {
 }
 
 /**
- * Создаёт клиент для взаимодействия с FastAPI_CDEKLLM.
+ * Создаёт клиент для взаимодействия с OpenAI-совместимым LLM-ендпоинтом.
  * @param {{
  *   baseUrl?: string,
  *   model?: string,
@@ -24,9 +24,9 @@ export class LlmError extends Error {
  * }} opts
  */
 export function createLlmClient({
-  baseUrl = process.env.CDEK_LLM_URL ?? process.env.OPENAI_BASE_URL ?? 'http://127.0.0.1:8000/v1',
-  model = process.env.CDEK_LLM_MODEL ?? 'yandex/deepseek-v4.1-flash',
-  apiKey = process.env.CDEK_LLM_API_KEY ?? 'dummy',
+  baseUrl = process.env.CUSTOM_LLM_URL ?? process.env.OPENAI_BASE_URL ?? 'http://127.0.0.1:8000/v1',
+  model = process.env.CUSTOM_LLM_MODEL ?? 'gpt-4o-mini',
+  apiKey = process.env.CUSTOM_LLM_API_KEY ?? '',
   fetchImpl = fetch,
   timeoutMs = 120000,
 } = {}) {
@@ -62,22 +62,22 @@ export function createLlmClient({
 
       if (!res.ok) {
         const text = await res.text();
-        throw new LlmError('cdek_llm_http_error', `FastAPI_CDEKLLM вернул HTTP ${res.status}: ${text}`);
+        throw new LlmError('llm_http_error', `LLM вернул HTTP ${res.status}: ${text}`);
       }
 
       const data = await res.json();
       const content = data?.choices?.[0]?.message?.content;
       if (!content) {
-        throw new LlmError('cdek_llm_empty_response', 'FastAPI_CDEKLLM вернул пустой ответ');
+        throw new LlmError('llm_empty_response', 'LLM вернул пустой ответ');
       }
 
       return content.trim();
     } catch (err) {
       if (err.name === 'AbortError') {
-        throw new LlmError('cdek_llm_timeout', `Таймаут запроса к FastAPI_CDEKLLM (${timeoutMs} мс)`);
+        throw new LlmError('llm_timeout', `Таймаут запроса к LLM (${timeoutMs} мс)`);
       }
       if (err instanceof LlmError) throw err;
-      throw new LlmError('cdek_llm_connection_failed', `Не удалось подключиться к FastAPI_CDEKLLM (${root}): ${err.message}`);
+      throw new LlmError('llm_connection_failed', `Не удалось подключиться к LLM (${root}): ${err.message}`);
     } finally {
       clearTimeout(timer);
     }
@@ -96,7 +96,7 @@ export function createLlmClient({
     }
   }
 
-  /** Проверка статуса прокси CDEK */
+  /** Проверка статуса LLM-ендпоинта */
   async function status() {
     try {
       // Пытаемся дёрнуть /health на родителе или /models

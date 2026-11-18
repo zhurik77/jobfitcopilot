@@ -37,7 +37,7 @@ test('createLlmClient: chatCompletion parsing & error handling', async () => {
   const clientErr = createLlmClient({ fetchImpl: fakeFetch500 });
   await assert.rejects(
     async () => clientErr.analyzeFit({ vacancyText: 'Job', resumeText: 'Resume' }),
-    (err) => err instanceof LlmError && err.code === 'cdek_llm_http_error'
+    (err) => err instanceof LlmError && err.code === 'llm_http_error'
   );
 });
 

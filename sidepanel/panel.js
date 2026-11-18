@@ -2025,6 +2025,15 @@
       checkBtn.click();
     };
 
+    // Показываем кнопку отклика, если активная вкладка — поддерживаемый сайт
+    const submitBtn = $('btn-ats-submit');
+    const source = currentVacancy.source || '';
+    if (['hh.ru', 'linkedin', 'upwork'].includes(source)) {
+      submitBtn.hidden = false;
+    } else {
+      submitBtn.hidden = true;
+    }
+
     $('ats-result').hidden = false;
     return id;
   }
@@ -2035,7 +2044,7 @@
 
   $('btn-ats-submit').addEventListener('click', async () => {
     if (atsSubmitLock) return;
-    clearError();
+    clearAtsError();
 
     const keyCheck = await hasApiKeyForActiveModel();
     if (!keyCheck.ok) { showNoApiKey(keyCheck.modelKey); return; }
@@ -2061,9 +2070,9 @@
             : 'ru';
         }
 
-        const description = currentVacancy.description;
-        const { savedResumes } = await JFC.ensureSavedResumes();
         const resumeText = $('ats-inline-resume') ? $('ats-inline-resume').value.trim() : '';
+        // ensureSavedResumes вызывается ради сайд-эффекта (миграция legacy-профилей)
+        await JFC.ensureSavedResumes();
         if (!resumeText) {
           showAtsError('Нет текста резюме — выбери резюме в поле выше.');
           return;
@@ -2074,6 +2083,8 @@
           type: 'WRITE_LETTER',
           vacancy: currentVacancy,
           profile: resumeText,
+          sellingPoints: [],
+          flags: [],
           lang,
           tone: ($('letter-tone') && $('letter-tone').value) || 'neutral'
         }, null, '');

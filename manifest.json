@@ -19,7 +19,8 @@
     { "matches": ["https://*.hh.ru/vacancy/*"], "js": ["content-scripts/extractor-hh.js"] },
     { "matches": ["https://*.hh.ru/resume/*"], "js": ["content-scripts/extractor-hh-resume.js"] },
     { "matches": ["https://*.linkedin.com/jobs/*"], "js": ["content-scripts/extractor-linkedin.js"] },
-    { "matches": ["https://*.upwork.com/jobs/*"], "js": ["content-scripts/extractor-upwork.js"] }
+    { "matches": ["https://*.upwork.com/jobs/*"], "js": ["content-scripts/extractor-upwork.js"] },
+    { "matches": ["https://*.hh.ru/*", "https://*.linkedin.com/*", "https://*.upwork.com/*"], "js": ["content-scripts/submit-ats.js"] }
   ],
   "action": {
     "default_title": "Job Fit Copilot",

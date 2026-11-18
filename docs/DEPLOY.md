@@ -79,7 +79,7 @@ npm run build:docs
 | `NODE_ENV` | `production` | Runtime mode |
 | `DB_PATH` | `/data/jobfit.db` (Docker), `:memory:` (manual) | SQLite database file path; `:memory:` runs an ephemeral in-memory DB |
 | `WEBBRIDGE_URL` | — | URL of the web bridge service (e.g. `http://host.docker.internal:10086`) |
-| `CDEK_LLM_URL` | — | OpenAI-compatible LLM endpoint (e.g. `http://host.docker.internal:8000/v1`) |
+| `CUSTOM_LLM_URL` | — | OpenAI-compatible LLM endpoint (e.g. `http://host.docker.internal:8000/v1`) |
 
 ### Accessing host services from inside Docker
 

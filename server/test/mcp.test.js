@@ -668,23 +668,23 @@ test('FSM MCP инструменты: summary, inspect, advance, batch_advance',
   assert.equal(typeof batchRes.data.processed, 'number');
 });
 
-test('FastAPI_CDEKLLM инструменты: status, auto_process_vacancy, auto_run_pipeline', async () => {
+test('LLM инструменты: status, auto_process_vacancy, auto_run_pipeline', async () => {
   const c = await ready();
 
-  // 1. cdek_llm_status
-  const stRes = await c.call('cdek_llm_status', {});
+  // 1. llm_status
+  const stRes = await c.call('llm_status', {});
   assert.equal(stRes.isError, false);
   assert.equal(stRes.data.connected, true);
   assert.equal(stRes.data.model, 'deepseek-test');
 
-  // 2. cdek_auto_process_vacancy
-  const procRes = await c.call('cdek_auto_process_vacancy', { key: 'hh.ru:1' });
+  // 2. auto_process_vacancy
+  const procRes = await c.call('auto_process_vacancy', { key: 'hh.ru:1' });
   assert.equal(procRes.isError, false);
   assert.equal(procRes.data.status, 'drafted');
   assert.equal(procRes.data.fitScore, 85);
 
-  // 3. cdek_auto_run_pipeline
-  const runRes = await c.call('cdek_auto_run_pipeline', { limit: 2 });
+  // 3. auto_run_pipeline
+  const runRes = await c.call('auto_run_pipeline', { limit: 2 });
   assert.equal(runRes.isError, false);
   assert.equal(typeof runRes.data.processed, 'number');
 });

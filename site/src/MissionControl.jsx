@@ -1394,7 +1394,7 @@ export default function App() {
       ts: new Date().toTimeString().slice(0, 8),
       subsys: 'LLM-LINT',
       vacancyId: null,
-      text: 'FastAPI_CDEKLLM: yandex/deepseek-v4.1-flash активен · Анти-штамп линтер готов',
+      text: 'LLM: кастомный endpoint активен · Анти-штамп линтер готов',
       tone: 'emerald',
     },
     {
@@ -2103,7 +2103,7 @@ export default function App() {
   const handleRunAutoBatch = async () => {
     if (runningBatch) return;
     setRunningBatch(true);
-    appendLog(null, 'Запуск пакетной обработки через FastAPI_CDEKLLM...', 'indigo', 'SYSTEM');
+    appendLog(null, 'Запуск пакетной обработки...', 'indigo', 'SYSTEM');
 
     try {
       const res = await fetch('/api/pipeline/auto-run', {
@@ -2115,7 +2115,7 @@ export default function App() {
         const data = await res.json();
         appendLog(
           null,
-          `FastAPI_CDEKLLM: Обработано ${data.processed} вакансий через DeepSeek`,
+          `LLM: Обработано ${data.processed} вакансий`,
           'emerald',
           'ATS-TEST'
         );
@@ -2660,7 +2660,7 @@ export default function App() {
               setRegenerating(false);
               appendLog(
                 vacancyId,
-                `FastAPI_CDEKLLM DeepSeek: Письмо перегенерировано (${latestLetter.text.split(/\s+/).length} слов, линт: ${latestLetter.lint?.ok ? 'ОК' : 'Предупреждения'})`,
+                `LLM: Письмо перегенерировано (${latestLetter.text.split(/\s+/).length} слов, линт: ${latestLetter.lint?.ok ? 'ОК' : 'Предупреждения'})`,
                 'emerald',
                 'LLM-LINT'
               );

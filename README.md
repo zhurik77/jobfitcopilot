@@ -299,7 +299,7 @@ npm run site     # собрать лендинг из site/ в docs/ (GitHub Pag
 │  (content)   │     │  ┌─────────────────┐ │     └──────────────┘
 └──────────────┘     │  │  MCP Server     │ │     ┌──────────────┐
                      │  │  REST API       │ │────▶│  FastAPI     │
-┌──────────────┐     │  │  Autopilot      │ │     │  CDEKLLM     │
+┌──────────────┐     │  │  Autopilot      │ │     │  Custom LLM  │
 │  Web Panel   │────▶│  │  FSM Engine     │ │     └──────────────┘
 │  (React)     │     │  └─────────────────┘ │     ┌──────────────┐
 └──────────────┘     │  WebBridge (Browser) │────▶│  hh.ru /     │
