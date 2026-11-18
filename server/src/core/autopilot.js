@@ -9,7 +9,6 @@
 // 7. Отправка одобренных с рандомизированной паузой и соблюдением суточных лимитов
 // 8. Фоновый трекинг статусов откликов (приглашения/отказы)
 import { unansweredQuestionIds } from '../api.js';
-import { evaluateTransitionGuards } from './fsm.js';
 
 export class AutopilotEngine {
   /**

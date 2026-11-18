@@ -77,11 +77,16 @@ class HttpError extends Error {
 }
 
 function send(res, status, body) {
-  const data = JSON.stringify(body);
+  const data = body === null ? '' : JSON.stringify(body);
   res.writeHead(status, {
-    'content-type': 'application/json; charset=utf-8',
+    'content-type': body === null ? '' : 'application/json; charset=utf-8',
     'content-length': Buffer.byteLength(data),
-    'cache-control': 'no-store'
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'access-control-allow-headers': 'content-type, authorization',
   });
   res.end(data);
 }
@@ -112,13 +117,18 @@ export function createApi({ db, lint = lintLetter, llm, autopilot }) {
   async function handle(req, res) {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (!url.pathname.startsWith('/api/')) return false;
+    if (req.method === 'OPTIONS') {
+      send(res, 204, null);
+      return true;
+    }
     try {
       const body = await route(req, url);
       send(res, 200, body);
     } catch (err) {
       const status = err instanceof HttpError ? err.status : 500;
       const code = err instanceof HttpError ? err.code : 'internal_error';
-      send(res, status, { error: { code, message: err?.message ?? String(err) } });
+      const message = status >= 500 ? 'Внутренняя ошибка сервера' : (err?.message ?? String(err));
+      send(res, status, { error: { code, message } });
     }
     return true;
   }

@@ -9,7 +9,6 @@ import { validateAnswers, unansweredQuestionIds } from './api.js';
 import { lintLetter } from './core/letter-lint.js';
 import { PROMPTS, letterPrompt } from './core/prompts.js';
 import {
-  FSM_STATES,
   evaluateTransitionGuards,
   inspectVacancyFsm,
   getPipelineFsmSummary,
@@ -824,7 +823,6 @@ export function createMcpServer({ db, sites, bridge, llm, autopilot, now = Date.
       const pipeline = db.listPipeline() || [];
       const eligible = pipeline.filter(v => ['found', 'scored', 'drafted'].includes(v.status)).slice(0, limit);
       const advanced = [];
-      const skipped = [];
       const blocked = [];
 
       for (const v of eligible) {

@@ -3,6 +3,7 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createApi } from './api.js';
 import { createMcpServer } from './mcp.js';
@@ -25,8 +26,68 @@ const MIME = {
   '.woff2': 'font/woff2'
 };
 
+// --- Rate limiter (in-memory sliding window) ---
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 100;
+const rateBuckets = new Map();
+
+function rateLimit(ip) {
+  const now = Date.now();
+  let bucket = rateBuckets.get(ip);
+  if (!bucket || now - bucket.windowStart > RATE_LIMIT_WINDOW_MS) {
+    bucket = { windowStart: now, count: 0 };
+    rateBuckets.set(ip, bucket);
+  }
+  bucket.count++;
+  return bucket.count <= RATE_LIMIT_MAX;
+}
+
+// Периодическая очистка устаревших bucket'ов (раз в 5 минут)
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, bucket] of rateBuckets) {
+    if (now - bucket.windowStart > RATE_LIMIT_WINDOW_MS * 2) rateBuckets.delete(ip);
+  }
+}, 300_000).unref();
+
+// --- Structured logger ---
+function log(level, msg, meta = {}) {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    level,
+    msg,
+    ...meta,
+  };
+  const out = JSON.stringify(entry);
+  if (level === 'error' || level === 'warn') {
+    process.stderr.write(out + '\n');
+  } else {
+    process.stdout.write(out + '\n');
+  }
+}
+
+// --- CORS & Security headers ---
+const CORS_HEADERS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, HEAD, POST, PUT, DELETE, OPTIONS',
+  'access-control-allow-headers': 'Content-Type, Authorization, Accept, X-Request-Id',
+  'access-control-allow-credentials': 'true',
+};
+
+const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'DENY',
+  'referrer-policy': 'no-referrer',
+  'x-xss-protection': '0',
+};
+
 function sendJson(res, status, body, headers = {}) {
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', ...headers });
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    ...CORS_HEADERS,
+    ...SECURITY_HEADERS,
+    ...headers,
+  });
   res.end(JSON.stringify(body));
 }
 
@@ -69,13 +130,16 @@ export function resolveStaticPath(publicDir, urlPath) {
   return full;
 }
 
-async function serveStatic(req, res, publicDir) {
+async function serveStatic(req, res, publicDir, requestId) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return sendJson(res, 405, { error: { code: 'method_not_allowed', message: 'Только GET' } }, { allow: 'GET, HEAD' });
   }
   const { pathname } = new URL(req.url ?? '/', 'http://localhost');
   const file = resolveStaticPath(publicDir, pathname);
-  if (!file) return sendJson(res, 404, { error: { code: 'not_found', message: 'Не найдено' } });
+  if (!file) {
+    log('warn', 'static_path_traversal_attempt', { requestId, pathname });
+    return sendJson(res, 404, { error: { code: 'not_found', message: 'Не найдено' } });
+  }
   try {
     const s = await stat(file);
     if (!s.isFile()) throw new Error('not a file');
@@ -83,10 +147,14 @@ async function serveStatic(req, res, publicDir) {
     res.writeHead(200, {
       'content-type': MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream',
       'content-length': body.length,
-      'cache-control': 'no-cache'
+      'cache-control': 'no-cache',
+      ...CORS_HEADERS,
+      ...SECURITY_HEADERS,
+      'x-request-id': requestId,
     });
     res.end(req.method === 'HEAD' ? undefined : body);
-  } catch {
+  } catch (err) {
+    log('warn', 'static_file_not_found', { requestId, pathname, error: err?.message ?? String(err) });
     sendJson(res, 404, { error: { code: 'not_found', message: 'Не найдено' } });
   }
 }
@@ -125,16 +193,46 @@ async function handleMcp(req, res, deps) {
 export function createApp({ db, sites, bridge, llm, autopilot, publicDir = PUBLIC_DIR }) {
   const api = createApi({ db, llm, autopilot });
   return http.createServer(async (req, res) => {
+    const startTime = Date.now();
+    const requestId = randomUUID();
+    const ip = req.socket?.remoteAddress ?? 'unknown';
+
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        ...CORS_HEADERS,
+        ...SECURITY_HEADERS,
+        'content-length': '0',
+      });
+      return res.end();
+    }
+
+    // Rate limiting
+    if (!rateLimit(ip)) {
+      log('warn', 'rate_limit_exceeded', { requestId, ip, method: req.method, url: req.url });
+      return sendJson(res, 429, { error: { code: 'too_many_requests', message: 'Слишком много запросов. Попробуйте позже.' } });
+    }
+
     try {
       const { pathname } = new URL(req.url ?? '/', 'http://localhost');
-      if (pathname === '/healthz') return sendJson(res, 200, { ok: true });
+      if (pathname === '/healthz') return sendJson(res, 200, { ok: true, requestId });
       if (pathname === '/mcp') return await handleMcp(req, res, { db, sites, bridge, llm, autopilot });
       if (await api.handle(req, res)) return;
-      await serveStatic(req, res, publicDir);
+      await serveStatic(req, res, publicDir, requestId);
     } catch (err) {
-      if (!res.headersSent) sendJson(res, 500, { error: { code: 'internal_error', message: err?.message ?? 'error' } });
+      log('error', 'request_error', { requestId, method: req.method, url: req.url, error: err?.message ?? String(err) });
+      if (!res.headersSent) sendJson(res, 500, { error: { code: 'internal_error', message: 'Внутренняя ошибка сервера' } });
       else res.end();
     }
+
+    const durationMs = Date.now() - startTime;
+    log('info', 'request', {
+      requestId,
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      durationMs,
+    });
   });
 }
 
@@ -166,8 +264,9 @@ export async function start() {
     server.once('error', reject);
     server.listen(port, host, resolve);
   });
-  console.log(`jobfitcopilot-server слушает http://${host}:${port} (db: ${dbPath})`);
+  log('info', 'server_started', { port, host, dbPath });
   const stop = () => {
+    log('info', 'server_stopping', {});
     if (autopilot) autopilot.stop();
     server.close(() => {
       db.close();

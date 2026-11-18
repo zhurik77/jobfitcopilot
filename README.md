@@ -5,18 +5,38 @@
   </picture>
 </p>
 
-<h1 align="center">Job Fit Copilot v0.5.0</h1>
+<h1 align="center">Job Fit Copilot v0.6.0</h1>
+
+<p align="center">
+  <a href="https://github.com/zhurik77/jobfitcopilot/stargazers">
+    <img src="https://img.shields.io/github/stars/zhurik77/jobfitcopilot?style=flat&label=%E2%AD%90%20Stars&color=yellow" alt="Stars">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue?style=flat" alt="License MIT">
+  </a>
+  <a href="https://github.com/zhurik77/jobfitcopilot/releases">
+    <img src="https://img.shields.io/github/v/release/zhurik77/jobfitcopilot?style=flat&label=%F0%9F%93%A6%20Version&color=green" alt="Version">
+  </a>
+  <a href="https://github.com/zhurik77/jobfitcopilot/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/zhurik77/jobfitcopilot/ci.yml?style=flat&label=%E2%9C%85%20Tests&color=brightgreen" alt="CI">
+  </a>
+  <a href="https://github.com/zhurik77/jobfitcopilot/pulls">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat" alt="PRs Welcome">
+  </a>
+</p>
+
 <p align="center">
   > AI-ассистент для проверки соответствия вакансий, глубокого ATS-анализа резюме, мульти-резюме сравнения и генерации сопроводительных писем — прямо в браузере.<br>
   hh.ru · LinkedIn · Upwork · DeepSeek V4 Flash / GLM-5.2 / GPT-4.1 / Claude Sonnet 4.6 — свой ключ, без бэкенда.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.5.0-FF9500" alt="Version: 0.5.0">
+  <a href="https://github.com/zhurik77/jobfitcopilot/actions"><img src="https://img.shields.io/github/actions/workflow/status/zhurik77/jobfitcopilot/ci.yml?branch=master&label=CI&logo=github" alt="CI"></a>
+  <a href="https://github.com/zhurik77/jobfitcopilot/releases/latest"><img src="https://img.shields.io/github/v/release/zhurik77/jobfitcopilot?label=release&logo=googlechrome" alt="Latest release"></a>
+  <a href="https://github.com/zhurik77/jobfitcopilot/stargazers"><img src="https://img.shields.io/github/stars/zhurik77/jobfitcopilot?style=flat&label=stars&logo=github" alt="GitHub stars"></a>
   <img src="https://img.shields.io/badge/license-MIT-4A7FD4" alt="License: MIT">
   <img src="https://img.shields.io/badge/manifest-v3-F2A33C" alt="Manifest V3">
   <img src="https://img.shields.io/badge/design-iOS%20HIG-FF9500" alt="Design: iOS HIG">
-  <img src="https://img.shields.io/badge/backend-none-3E9B5F" alt="Backend: none">
   <a href="https://github.com/zhurik77/jobfitcopilot/releases/latest"><img src="https://img.shields.io/badge/скачать-последний_релиз-success" alt="Скачать последний релиз"></a>
 </p>
 
@@ -31,7 +51,14 @@
   <a href="#модели-и-провайдеры">Модели и провайдеры</a> ·
   <a href="#чем-отличается">Чем отличается</a> ·
   <a href="PRIVACY.md">Приватность</a> ·
+  <a href="CONTRIBUTING.md">Контрибьюторам</a> ·
+  <a href="docs/ARCHITECTURE.md">Архитектура</a> ·
+  <a href="SECURITY.md">Безопасность</a> ·
   <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+<p align="center">
+  <a href="README.en.md"><strong>English version »</strong></a>
 </p>
 
 ---
@@ -208,6 +235,41 @@ npm run site     # собрать лендинг из site/ в docs/ (GitHub Pag
 а `release.yml` блокирует публикацию тега при любом провале.
 
 ---
+
+## 🗺️ Roadmap
+
+- **v0.6.0** — Docker Compose, Telegram/Discord бот, английский UI
+- **v0.7.0** — HR Expert Review, расширенная аналитика, новые сайты
+- **v1.0.0** — Плагинная система, Webhook интеграции, 500+ звезд
+
+Подробнее — [docs/ROADMAP.md](docs/ROADMAP.md)
+
+## 🏗️ Архитектура
+
+```
+┌──────────────┐     ┌─────────────────────┐     ┌──────────────┐
+│  Chrome Ext  │────▶│  Server (Node.js)    │────▶│  SQLite DB   │
+│  (content)   │     │  ┌─────────────────┐ │     └──────────────┘
+└──────────────┘     │  │  MCP Server     │ │     ┌──────────────┐
+                     │  │  REST API       │ │────▶│  FastAPI     │
+┌──────────────┐     │  │  Autopilot      │ │     │  CDEKLLM     │
+│  Web Panel   │────▶│  │  FSM Engine     │ │     └──────────────┘
+│  (React)     │     │  └─────────────────┘ │     ┌──────────────┐
+└──────────────┘     │  WebBridge (Browser) │────▶│  hh.ru /     │
+                     └─────────────────────┘     │  LinkedIn     │
+                                                 └──────────────┘
+```
+
+## 🤝 Сообщество
+
+- 🌟 **GitHub Stars** — если проект полезен, поставьте звезду!
+- 💬 **Telegram** — [@jobfitcopilot_chat](https://t.me/jobfitcopilot_chat) — русскоязычный чат
+- 🐛 **Issues** — сообщайте о багах и предлагайте фичи
+- 🔧 **PRs** — любые улучшения приветствуются
+
+## 👥 Приглашаем экспертов HR
+
+Проекту нужны консультации HR-специалистов и рекрутеров для улучшения ATS-анализа. Если вы работаете в HR или управляете наймом — присоединяйтесь к [Telegram-чату](https://t.me/jobfitcopilot_chat)!
 
 ## 💛 Поддержка проекта
 

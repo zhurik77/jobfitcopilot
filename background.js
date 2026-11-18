@@ -32,8 +32,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // Единый формат ответа панели: { ok: true, result } | { ok: false, code, message }.
 function handle(promise, sendResponse) {
   promise
-    .then(sendResponse)
-    .catch(err => sendResponse({ ok: false, code: 'NETWORK', message: String((err && err.message) || err) }));
+    .then(r => { try { sendResponse(r); } catch (_) { /* порт закрыт */ } })
+    .catch(err => {
+      try { sendResponse({ ok: false, code: 'NETWORK', message: String((err && err.message) || err) }); } catch (_) { /* порт закрыт */ }
+    });
 }
 
 async function getApiKey(modelKey) {

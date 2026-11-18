@@ -118,7 +118,6 @@ export function createLlmClient({
 
   /** ATS-сопоставление одного резюме с вакансией */
   async function matchAts({ vacancyText, resumeText }) {
-    const prompt = `${PROMPTS.ats}\n\nВАКАНСИЯ:\n${vacancyText}\n\nРЕЗЮМЕ КАНДИДАТА:\n${resumeText}\n\nВерни ТОЛЬКО валидный JSON в указанном формате:`;
     const reply = await chatCompletion({
       messages: [
         { role: 'system', content: PROMPTS.ats },

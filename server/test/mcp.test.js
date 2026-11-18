@@ -228,9 +228,9 @@ test('save_fit_analysis считает счёт и ставит scored; неиз
   const { call, db } = await connect();
   await call('search_vacancies', { text: 'x' });
   const { data } = await call('save_fit_analysis', {
-    key: 'hh.ru:1', resumeId: 'r1', result: { verdict: 'ok', ledger: [{ delta: 10 }, { delta: 'x' }] }
+    key: 'hh.ru:1', resumeId: 'r1', result: { hard_requirements_coverage_percent: 80, overall_match_score: 90 }
   });
-  assert.equal(data.score, 60);
+  assert.equal(data.score, 87);
   assert.equal(db.getVacancy('hh.ru:1').status, 'scored');
   const miss = await call('save_fit_analysis', { key: 'hh.ru:404', resumeId: 'r1', result: {} });
   assert.equal(miss.data.error.code, 'not_found');
@@ -706,7 +706,9 @@ test('HTTP: healthz, 405 на GET /mcp, stateless POST /mcp, статика', as
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
-    assert.deepEqual(await (await fetch(`${base}/healthz`)).json(), { ok: true });
+    const health = await (await fetch(`${base}/healthz`)).json();
+    assert.equal(health.ok, true);
+    assert.ok(typeof health.requestId === 'string');
     assert.equal((await fetch(`${base}/mcp`)).status, 405);
     assert.equal((await fetch(`${base}/mcp`, { method: 'DELETE' })).status, 405);
     assert.equal((await fetch(`${base}/mcp`, { method: 'POST', body: '{' })).status, 400);

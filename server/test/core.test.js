@@ -31,29 +31,45 @@ const RULE_CASES = {
 };
 
 describe('computeFitScore', () => {
-  test('база 50 плюс сумма дельт из ledger', () => {
-    assert.equal(computeFitScore({ ledger: [{ delta: 20 }, { delta: -5 }] }), 65);
+  test('база 50 плюс взвешенная сумма отклонений', () => {
+    // hard=80, overall=90: 50 + round((80-50)*0.3 + (90-50)*0.7) = 50 + round(9+28) = 87
+    assert.equal(computeFitScore({ hard_requirements_coverage_percent: 80, overall_match_score: 90 }), 87);
   });
 
-  test('результат зажимается в диапазон 0..100', () => {
-    assert.equal(computeFitScore({ ledger: [{ delta: 40 }, { delta: 30 }] }), 100);
-    assert.equal(computeFitScore({ ledger: [{ delta: -40 }, { delta: -30 }] }), 0);
+  test('только hard даёт меньший вес', () => {
+    // hard=100: 50 + round(50*0.3 + (-50)*0.7) = 30
+    assert.equal(computeFitScore({ hard_requirements_coverage_percent: 100 }), 30);
   });
 
-  test('нечисловые дельты игнорируются', () => {
-    const parsed = { ledger: [{ delta: 'много' }, { delta: 5 }, { delta: null }, {}, { delta: 'nan' }] };
-    assert.equal(computeFitScore(parsed), 55);
+  test('только overall даёт больший вес', () => {
+    // overall=100: 50 + round((-50)*0.3 + 50*0.7) = 70
+    assert.equal(computeFitScore({ overall_match_score: 100 }), 70);
   });
 
-  test('без ledger берётся score и тоже зажимается', () => {
-    assert.equal(computeFitScore({ score: 72.4 }), 72);
-    assert.equal(computeFitScore({ score: 150 }), 100);
-    assert.equal(computeFitScore({ ledger: [], score: 60 }), 60);
+  test('зажим 0..100', () => {
+    assert.equal(computeFitScore({ hard_requirements_coverage_percent: 100, overall_match_score: 100 }), 100);
+    assert.equal(computeFitScore({ hard_requirements_coverage_percent: 0, overall_match_score: 0 }), 0);
+    assert.equal(computeFitScore({ hard_requirements_coverage_percent: 200, overall_match_score: 200 }), 100);
+    assert.equal(computeFitScore({ hard_requirements_coverage_percent: -100, overall_match_score: -100 }), 0);
   });
 
-  test('пустой объект и отсутствующий ledger дают 0 без падения', () => {
+  test('нечисловые проценты дают 0', () => {
+    const parsed = { hard_requirements_coverage_percent: 'abc', overall_match_score: 'xyz' };
+    assert.equal(computeFitScore(parsed), 0);
+  });
+
+  test('score не используется', () => {
+    assert.equal(computeFitScore({ score: 72.4 }), 0);
+    assert.equal(computeFitScore({ score: 150 }), 0);
+  });
+
+  test('null возвращает BASE_SCORE', () => {
+    assert.equal(computeFitScore(null), 50);
+    assert.equal(computeFitScore(undefined), 50);
+  });
+
+  test('пустой объект даёт 0', () => {
     assert.equal(computeFitScore({}), 0);
-    assert.equal(computeFitScore(null), 0);
   });
 });
 
