@@ -2,7 +2,41 @@
 
 All notable changes to Job Fit Copilot will be documented in this file.
 
-## [Unreleased]
+## [0.6.1] - 2025-07-27
+
+### Added
+- **i18n engine.** `shared/i18n.js` — загрузка локалей, интерполяция, data-i18n атрибуты.
+  Локали: `shared/locales/ru.json` (русский), `shared/locales/en.json` (английский).
+  Интегрировано в panel.html, options.html, background.js.
+- **Telegram bot.** `server/src/telegram.js` — long-polling бот с командами /start, /stop, /status.
+  Уведомления о новых вакансиях и смене статусов. Включается через `TELEGRAM_BOT_TOKEN`.
+- **Error monitoring.** `server/src/monitor.js` — in-process мониторинг: метрики запросов,
+  ошибок, латентности. Endpoint `/metrics` с агрегированной статистикой.
+- **Расширенные тесты.** 66 тестов для i18n (18), panel.js (42), profile (3), reports (3).
+  Полное покрытие: esc, scoreKind, computeScore, rankResumeMatches, splitExperienceHeading,
+  buildAtsAuditReportHtml, buildAnalyticsReportHtml, локали, интерполяция, XSS-экранирование.
+
+### Changed
+- **panel.js**: вердикты и сообщения об ошибках через i18n (getVerdicts(), _t()).
+- **options.html**: data-i18n атрибуты для всех заголовков, кнопок, плейсхолдеров.
+- **background.js**: загружает i18n через importScripts.
+
+### Added
+- **CORS, Security Headers, Rate Limiting.** Сервер теперь отправляет CORS-заголовки,
+  security-заголовки (X-Content-Type-Options, X-Frame-Options, Referrer-Policy),
+  in-memory rate limiter (100 запросов/мин/IP) и X-Request-Id для traceability.
+- **Structured JSON logging.** Все запросы логируются в JSON с полями timestamp,
+  level, requestId, method, url, status, durationMs.
+- **+20 новых тестов.** Покрытие scoring (computeFitScore, rankResumeMatches) и
+  resume-summary (extractResumeSummary) — граничные случаи, null safety, округление.
+- **FUNDING.yml.** Добавлен файл поддержки проекта.
+- **docs/ROADMAP.md.** Дорожная карта развития проекта.
+
+### Changed
+- **index.js рефакторинг.** Вынесены CORS, security headers, rate limiter и
+  structured logger в отдельные модули. OPTIONS-запросы обрабатываются.
+- **README обновлён.** Добавлены OSS-бейджи, архитектурная диаграмма, roadmap,
+  ссылки на сообщество.
 
 ### Fixed
 - **Сайт проекта не собирался.** GitHub Pages прогонял `docs/` через Jekyll, и

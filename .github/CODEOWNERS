@@ -1,0 +1,17 @@
+# Default owners
+* @zhurik77
+
+# Server core logic
+/server/src/core/ @zhurik77
+
+# Site adapters
+/server/src/sites/ @zhurik77
+
+# Chrome extension
+/content-scripts/ @zhurik77
+/background.js @zhurik77
+/sidepanel/ @zhurik77
+
+# Documentation
+/docs/ @zhurik77
+*.md @zhurik77

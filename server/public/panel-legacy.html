@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Job Fit Copilot — панель</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Job Fit Copilot</h1>
+    <div class="conn" id="conn" role="status" aria-live="polite"></div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Разделы панели">
+    <button type="button" class="tab" role="tab" id="tab-pipeline" data-tab="pipeline" aria-controls="view-pipeline" aria-selected="true">Отклики</button>
+    <button type="button" class="tab" role="tab" id="tab-resumes" data-tab="resumes" aria-controls="view-resumes" aria-selected="false" tabindex="-1">Резюме</button>
+    <button type="button" class="tab" role="tab" id="tab-settings" data-tab="settings" aria-controls="view-settings" aria-selected="false" tabindex="-1">Настройки</button>
+  </nav>
+
+  <div id="view-pipeline" role="tabpanel" aria-labelledby="tab-pipeline">
+  <section class="stats" id="stats" aria-label="Статистика"></section>
+
+  <main class="layout">
+    <section class="pane pane-list" id="listPane" aria-label="Конвейер">
+      <div class="filters">
+        <label class="sr-only" for="fText">Поиск по названию и компании</label>
+        <input type="search" id="fText" placeholder="Поиск по названию и компании" autocomplete="off">
+        <label class="sr-only" for="fStatus">Фильтр по статусу</label>
+        <select id="fStatus"></select>
+      </div>
+      <div id="listError" class="banner banner-error" role="alert" hidden></div>
+      <div id="list" class="list"></div>
+    </section>
+
+    <section class="pane pane-detail" id="detailPane" aria-label="Вакансия" tabindex="-1">
+      <button type="button" class="btn btn-quiet back" id="backBtn" hidden>&larr; К списку</button>
+      <div id="detail"></div>
+    </section>
+  </main>
+  </div>
+
+  <div id="view-resumes" role="tabpanel" aria-labelledby="tab-resumes" hidden>
+    <main class="layout">
+      <section class="pane pane-rlist" aria-label="Резюме">
+        <div id="resError" class="banner banner-error" role="alert" hidden></div>
+        <div id="resList" class="list"></div>
+      </section>
+      <section class="pane pane-rdetail" id="resDetailPane" aria-label="Аудит резюме" tabindex="-1">
+        <button type="button" class="btn btn-quiet rback" id="resBack" hidden>&larr; К списку</button>
+        <div id="resDetail"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="view-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+    <main class="settings-wrap">
+      <section class="card" aria-labelledby="setHead">
+        <h2 id="setHead">Ограничения отправки</h2>
+        <div id="setBody"></div>
+      </section>
+      <section class="card" aria-labelledby="srcHead">
+        <h2 id="srcHead">Сохранённые поиски</h2>
+        <div id="srcBody"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="panel.js"></script>
+</body>
+</html>

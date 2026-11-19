@@ -1,0 +1,18 @@
+# Корневой .dockerignore для сборки server/Dockerfile (контекст: корень репозитория)
+node_modules
+server/node_modules
+site/node_modules
+.git
+.github
+.ruff_cache
+graphify-out
+.claude
+site
+dist
+*.log
+launch
+tools
+icons
+content-scripts
+options
+sidepanel

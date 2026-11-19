@@ -29,7 +29,24 @@
     ? 'v' + chrome.runtime.getManifest().version
     : '';
 
-  const VERDICTS = ['ОТКЛИКАТЬСЯ', 'С ОГОВОРКАМИ', 'ПРОПУСТИТЬ'];
+  // i18n helper — делегирует JFC_I18N.t() с fallback на исходную строку
+  const _t = (key, fallback, vars) => {
+    const tf = globalThis.JFC_I18N && globalThis.JFC_I18N.t;
+    return tf ? tf(key, vars) : fallback;
+  };
+
+  // Вердикты вычисляются при первом обращении (после загрузки i18n)
+  let _verdictsCache = null;
+  function getVerdicts() {
+    if (!_verdictsCache) {
+      _verdictsCache = [
+        _t('verdict_apply', 'ОТКЛИКАТЬСЯ'),
+        _t('verdict_consider', 'С ОГОВОРКАМИ'),
+        _t('verdict_skip', 'ПРОПУСТИТЬ')
+      ];
+    }
+    return _verdictsCache;
+  }
   const HISTORY_LIMIT = 50;
   const BASE_SCORE = 50;
 
@@ -94,7 +111,7 @@
 
   function showNoApiKey(modelKey) {
     const label = modelKey && MODELS[modelKey] ? MODELS[modelKey].label : 'выбранной модели';
-    showError('Не указан API-ключ для модели «' +label + '». Добавь его в настройках — без ключа запросы не отправляются.');
+    showError(_t('msg_no_api_key', 'Не указан API-ключ для модели «{model}». Добавь его в настройках.', { model: label }));
     openSettingsBtn.hidden = false;
   }
 
@@ -318,13 +335,14 @@
     if (typeof profile.atsScore === 'number') {
       scoreEl.textContent = profile.atsScore;
       scoreEl.className = 'rs-stat-num ' + scoreKind(profile.atsScore);
-      labelEl.textContent = 'ATS-оценка';
+      labelEl.textContent = _t('label_ats_score', 'ATS-оценка');
       wrap.classList.add('is-clickable');
-      wrap.title = 'Оценка от ' + new Date(profile.atsScoreAt || Date.now()).toLocaleDateString('ru-RU');
+      const lang = (globalThis.JFC_I18N && globalThis.JFC_I18N.getLanguage()) || 'ru';
+      wrap.title = _t('label_score_from', 'Оценка от') + ' ' + new Date(profile.atsScoreAt || Date.now()).toLocaleDateString(lang === 'en' ? 'en-US' : 'ru-RU');
     } else {
       scoreEl.textContent = '—';
       scoreEl.className = 'rs-stat-num';
-      labelEl.textContent = 'не оценено';
+      labelEl.textContent = _t('label_not_scored', 'не оценено');
       wrap.classList.remove('is-clickable');
       wrap.removeAttribute('title');
     }
@@ -432,11 +450,11 @@
     const statusEl = $('profile-import-status');
     const btn = $('btn-import-resume');
     btn.disabled = true;
-    statusEl.textContent = 'Читаю резюме со страницы…';
+    statusEl.textContent = _t('msg_reading_resume', 'Читаю резюме со страницы…');
 
     const tab = await getActiveTab();
     if (!tab || !isResumePageUrl(tab.url)) {
-      statusEl.textContent = 'Открой страницу своего резюме на hh.ru и попробуй снова.';
+      statusEl.textContent = _t('msg_open_resume_page', 'Открой страницу своего резюме на hh.ru и попробуй снова.');
       btn.disabled = false;
       return;
     }
@@ -456,7 +474,7 @@
     }
 
     if (!resume || !resume.text) {
-      statusEl.textContent = 'Не удалось прочитать резюме. Обнови страницу hh.ru и попробуй ещё раз.';
+      statusEl.textContent = _t('msg_failed_read_resume', 'Не удалось прочитать резюме. Обнови страницу hh.ru и попробуй ещё раз.');
       btn.disabled = false;
       return;
     }
@@ -488,7 +506,7 @@
     // Импортированное резюме сразу доступно для ATS-сравнения без перезагрузки.
     await populateAtsResumeSelect();
 
-    statusEl.textContent = 'Импортировано: ' + (resume.experience ? resume.experience.length : 0) +
+    statusEl.textContent = _t('msg_imported', 'Импортировано') + ': ' + (resume.experience ? resume.experience.length : 0) +
       ' мест работы, ' + (resume.skills ? resume.skills.length : 0) + ' навыков, обновлено ' +
       new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     btn.disabled = false;
@@ -499,7 +517,7 @@
   $('btn-review-resume').addEventListener('click', async () => {
     const profileText = $('profile-text').value.trim();
     if (!profileText) {
-      showError('Сначала укажи текст профиля/резюме.');
+      showError(_t('msg_enter_resume_text', 'Сначала укажи текст профиля/резюме.'));
       return;
     }
     const keyCheck = await hasApiKeyForActiveModel();
@@ -515,15 +533,15 @@
       const resp = await sendWithRetry({ type: 'REVIEW_RESUME', profile: profileText }, rrLoadingLabel, 'Оцениваю');
       if (!resp) throw new Error('empty response');
       if (!resp.ok) {
-        if (resp.code === 'NO_API_KEY') { showError('Не указан API-ключ для модели «' +resp.message + '». Добавь его в настройках — без ключа запросы не отправляются.'); openSettingsBtn.hidden = false; return; }
-        if (resp.code === 'PARSE_ERROR') { showError('Модель несколько раз подряд вернула повреждённый ответ. Попробуй ещё раз или переключи модель в настройках.'); openSettingsBtn.hidden = false; return; }
-        if (resp.code === 'RATE_LIMIT') { showError('Провайдер перегружен для этой модели даже после повторов. Попробуй позже или переключи модель в настройках.'); openSettingsBtn.hidden = false; return; }
-        showError('Ошибка API: ' + (resp.message || 'неизвестная'));
+        if (resp.code === 'NO_API_KEY') { showError(_t('msg_no_api_key_long', 'Не указан API-ключ для модели') + ' «' + resp.message + '». ' + _t('msg_add_key_settings', 'Добавь его в настройках — без ключа запросы не отправляются.')); openSettingsBtn.hidden = false; return; }
+        if (resp.code === 'PARSE_ERROR') { showError(_t('msg_parse_error', 'Модель несколько раз подряд вернула повреждённый ответ. Попробуй ещё раз или переключи модель в настройках.')); openSettingsBtn.hidden = false; return; }
+        if (resp.code === 'RATE_LIMIT') { showError(_t('msg_rate_limit', 'Провайдер перегружен для этой модели даже после повторов. Попробуй позже или переключи модель в настройках.')); openSettingsBtn.hidden = false; return; }
+        showError(_t('msg_api_error', 'Ошибка API') + ': ' + (resp.message || _t('msg_unknown', 'неизвестная')));
         return;
       }
       renderResumeReview(resp.result);
     } catch (e) {
-      showError('Не получилось оценить резюме. Проверь подключение и попробуй ещё раз.');
+      showError(_t('msg_review_failed', 'Не получилось оценить резюме. Проверь подключение и попробуй ещё раз.'));
       console.error(e);
     } finally {
       $('btn-review-resume').disabled = false;
@@ -801,7 +819,7 @@
 
     const description = vacancyTextarea.value.trim();
     if (!description) {
-      showError('Нет текста вакансии. Открой страницу вакансии или вставь текст вручную.');
+      showError(_t('msg_no_vacancy', 'Нет текста вакансии. Открой страницу вакансии или вставь текст вручную.'));
       return;
     }
 
@@ -823,10 +841,10 @@
       }, loadingLabel, 'Проверяю');
       if (!resp) throw new Error('empty response');
       if (!resp.ok) {
-        if (resp.code === 'NO_API_KEY') { showError('Не указан API-ключ для модели «' +resp.message + '». Добавь его в настройках — без ключа запросы не отправляются.'); openSettingsBtn.hidden = false; return; }
-        if (resp.code === 'PARSE_ERROR') { showError('Модель несколько раз подряд вернула повреждённый ответ. Попробуй ещё раз или переключи модель в настройках.'); openSettingsBtn.hidden = false; return; }
-        if (resp.code === 'RATE_LIMIT') { showError('Провайдер перегружен для этой модели даже после повторов. Попробуй позже или переключи модель в настройках.'); openSettingsBtn.hidden = false; return; }
-        showError('Ошибка API: ' + (resp.message || 'неизвестная'));
+        if (resp.code === 'NO_API_KEY') { showError(_t('msg_no_api_key_long', 'Не указан API-ключ для модели') + ' «' + resp.message + '». ' + _t('msg_add_key_settings', 'Добавь его в настройках — без ключа запросы не отправляются.')); openSettingsBtn.hidden = false; return; }
+        if (resp.code === 'PARSE_ERROR') { showError(_t('msg_parse_error', 'Модель несколько раз подряд вернула повреждённый ответ. Попробуй ещё раз или переключи модель в настройках.')); openSettingsBtn.hidden = false; return; }
+        if (resp.code === 'RATE_LIMIT') { showError(_t('msg_rate_limit', 'Провайдер перегружен для этой модели даже после повторов. Попробуй позже или переключи модель в настройках.')); openSettingsBtn.hidden = false; return; }
+        showError(_t('msg_api_error', 'Ошибка API') + ': ' + (resp.message || _t('msg_unknown', 'неизвестная')));
         return;
       }
       const score = computeScore(resp.result);
@@ -866,7 +884,8 @@
   };
 
   function renderResult(parsed, score, existingId) {
-    const verdict = VERDICTS.includes(parsed.verdict) ? parsed.verdict : 'С ОГОВОРКАМИ';
+    const v = getVerdicts();
+    const verdict = v.includes(parsed.verdict) ? parsed.verdict : v[1];
     const kind = verdictKind(verdict);
 
     const id = existingId || makeCheckId();
@@ -1026,9 +1045,9 @@
       }, letterLoadingLabel, 'Пишу письмо');
       if (!resp) throw new Error('empty response');
       if (!resp.ok) {
-        if (resp.code === 'NO_API_KEY') { showError('Не указан API-ключ для модели «' +resp.message + '». Добавь его в настройках — без ключа запросы не отправляются.'); openSettingsBtn.hidden = false; return; }
-        if (resp.code === 'RATE_LIMIT') { showError('Провайдер перегружен для этой модели даже после повторов. Попробуй позже или переключи модель в настройках.'); openSettingsBtn.hidden = false; return; }
-        showError('Не получилось написать письмо: ' + (resp.message || 'ошибка сети'));
+        if (resp.code === 'NO_API_KEY') { showError(_t('msg_no_api_key_long', 'Не указан API-ключ для модели') + ' «' + resp.message + '». ' + _t('msg_add_key_settings', 'Добавь его в настройках — без ключа запросы не отправляются.')); openSettingsBtn.hidden = false; return; }
+        if (resp.code === 'RATE_LIMIT') { showError(_t('msg_rate_limit', 'Провайдер перегружен для этой модели даже после повторов. Попробуй позже или переключи модель в настройках.')); openSettingsBtn.hidden = false; return; }
+        showError(_t('msg_letter_failed', 'Не получилось написать письмо') + ': ' + (resp.message || _t('msg_network_error_short', 'ошибка сети')));
         return;
       }
       $('letter-text').value = resp.result;
@@ -1036,7 +1055,7 @@
       const { lettersCount } = await chrome.storage.local.get('lettersCount');
       await chrome.storage.local.set({ lettersCount: (lettersCount || 0) + 1 });
     } catch (e) {
-      showError('Не получилось написать письмо. Проверь подключение и попробуй ещё раз.');
+      showError(_t('msg_letter_gen_failed', 'Не получилось написать письмо. Проверь подключение и попробуй ещё раз.'));
       console.error(e);
     } finally {
       $('letter-loading').style.display = 'none';
@@ -1085,7 +1104,7 @@
     if (!items.length) {
       const empty = document.createElement('div');
       empty.className = 'empty';
-      empty.textContent = 'Пока пусто — первая проверка появится здесь';
+      empty.textContent = _t('msg_no_history', 'Пока пусто — первая проверка появится здесь');
       historyEl.appendChild(empty);
       return;
     }
@@ -1275,7 +1294,7 @@
     text.className = 'an-best-text';
     const label = document.createElement('div');
     label.className = 'an-best-label';
-    label.textContent = 'лучший результат';
+    label.textContent = _t('label_best_result', 'лучший результат');
     const title = document.createElement('div');
     title.className = 'an-best-title';
     title.textContent = (sourceLabel(best.source) ? sourceLabel(best.source) + ' · ' : '') + (best.title || 'Вакансия');
@@ -1292,7 +1311,7 @@
     if (best.result) {
       el.setAttribute('role', 'button');
       el.tabIndex = 0;
-      el.title = 'Открыть полный разбор';
+      el.title = _t('label_open_full', 'Открыть полный разбор');
       el.onclick = () => openHistoryEntry(best);
       el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHistoryEntry(best); } };
     } else {
@@ -1364,7 +1383,7 @@
       numEl.textContent = String(total);
       const lblEl = document.createElement('div');
       lblEl.className = 'lbl';
-      lblEl.textContent = 'всего';
+      lblEl.textContent = _t('label_total', 'всего');
       totalEl.appendChild(numEl);
       totalEl.appendChild(lblEl);
     }
@@ -1559,7 +1578,7 @@
         showAtsError('');
         const btn = $('btn-update-resume-text');
         const oldText = btn.textContent;
-        btn.textContent = 'Сохранено ✓';
+        btn.textContent = _t('msg_saved', 'Сохранено') + ' ✓';
         setTimeout(() => { btn.textContent = oldText; }, 1400);
       }
     });
@@ -1572,7 +1591,7 @@
       const name = (nameInput && nameInput.value.trim()) || 'Новое резюме';
       const text = (textInput && textInput.value.trim()) || '';
       if (!text) {
-        showAtsError('Пожалуйста, введи текст резюме.');
+        showAtsError(_t('msg_no_resume', 'Пожалуйста, введи текст резюме.'));
         return;
       }
       const { savedResumes } = await JFC.ensureSavedResumes();
@@ -1676,7 +1695,7 @@
 
     const description = (atsVacancyTextarea && atsVacancyTextarea.value.trim()) || vacancyTextarea.value.trim();
     if (!description) {
-      showAtsError('Нет текста вакансии. Открой страницу вакансии или вставь текст вручную.');
+      showAtsError(_t('msg_no_vacancy', 'Нет текста вакансии. Открой страницу вакансии или вставь текст вручную.'));
       return;
     }
 
@@ -1685,7 +1704,7 @@
 
     const fullResume = $('ats-inline-resume') ? $('ats-inline-resume').value.trim() : '';
     if (!fullResume) {
-      showAtsError('Пожалуйста, выбери или внеси текст резюме выше.');
+      showAtsError(_t('msg_no_resume', 'Пожалуйста, выбери или внеси текст резюме выше.'));
       return;
     }
 
@@ -1725,7 +1744,7 @@
     const candidates = savedResumes.filter(r => r.text && r.text.trim());
 
     if (candidates.length < 2) {
-      showAtsError('Нужно минимум два сохранённых резюме. Добавь второй вариант позиционирования в настройках.');
+      showAtsError(_t('compare_no_data', 'Нужно минимум два сохранённых резюме. Добавь второй вариант позиционирования в настройках.'));
       return;
     }
 
@@ -1752,7 +1771,7 @@
 
         if (!resp || !resp.ok) {
           if (resp && resp.code === 'NO_API_KEY') {
-            showError('Не указан API-ключ. Добавь его в настройках.');
+            showError(_t('msg_no_api_key_short', 'Не указан API-ключ. Добавь его в настройках.'));
             openSettingsBtn.hidden = false;
             return;
           }
@@ -1816,7 +1835,7 @@
       if (idx === 0) {
         const badge = document.createElement('span');
         badge.className = 'chip chip-mini chip-good';
-        badge.textContent = 'отправлять это';
+        badge.textContent = _t('label_submit_this', 'отправлять это');
         head.appendChild(badge);
       } else {
         const diff = entry.hard - best.hard;
@@ -1843,7 +1862,7 @@
       if (entry.gaps.length) {
         const gaps = document.createElement('div');
         gaps.className = 'cmp-gaps';
-        gaps.textContent = 'Не закрыто: ' + entry.gaps.slice(0, 3).join('; ');
+        gaps.textContent = _t('label_not_closed', 'Не закрыто') + ': ' + entry.gaps.slice(0, 3).join('; ');
         row.appendChild(gaps);
       }
 
@@ -1852,7 +1871,7 @@
       const open = document.createElement('button');
       open.className = 'linkbtn';
       open.type = 'button';
-      open.textContent = 'открыть полный разбор';
+      open.textContent = _t('label_open_full', 'открыть полный разбор');
       open.addEventListener('click', () => {
         renderAtsResult(entry.result, description);
         $('ats-result').hidden = false;
@@ -1880,7 +1899,7 @@
     $('btn-ats-compare-all').addEventListener('click', async () => {
       const description = (atsVacancyTextarea && atsVacancyTextarea.value.trim()) || vacancyTextarea.value.trim();
       if (!description) {
-        showAtsError('Нет текста вакансии. Открой страницу вакансии или вставь текст вручную.');
+        showAtsError(_t('msg_no_vacancy', 'Нет текста вакансии. Открой страницу вакансии или вставь текст вручную.'));
         return;
       }
       const keyCheck = await hasApiKeyForActiveModel();
@@ -1904,7 +1923,7 @@
 
       if (!resp) throw new Error('empty response');
       if (!resp.ok) {
-        if (resp.code === 'NO_API_KEY') { showError('Не указан API-ключ для модели «' +resp.message + '». Добавь его в настройках.'); openSettingsBtn.hidden = false; return; }
+        if (resp.code === 'NO_API_KEY') { showError(_t('msg_no_api_key_long', 'Не указан API-ключ для модели') + ' «' + resp.message + '». ' + _t('msg_add_key_short', 'Добавь его в настройках.')); openSettingsBtn.hidden = false; return; }
         if (resp.code === 'PARSE_ERROR') { showAtsError('Модель вернула повреждённый ответ. Попробуй ещё раз.'); return; }
         if (resp.code === 'RATE_LIMIT') { showAtsError('Провайдер перегружен. Попробуй позже.'); return; }
         showAtsError('Ошибка API: ' + (resp.message || 'неизвестная'));
@@ -1977,7 +1996,7 @@
     if (!edits.length) {
       const empty = document.createElement('div');
       empty.className = 'meta';
-      empty.textContent = 'Критичных правок не требуется — резюме покрывает заявленные факты.';
+      empty.textContent = _t('msg_no_critical_edits', 'Критичных правок не требуется — резюме покрывает заявленные факты.');
       editsWrap.appendChild(empty);
     } else {
       edits.forEach(edit => {
@@ -1990,7 +2009,7 @@
 
         const gap = document.createElement('div');
         gap.className = 'ats-edit-gap';
-        gap.textContent = 'Не покрыто: ' + (edit.current_gap || '');
+        gap.textContent = _t('label_not_covered', 'Не покрыто') + ': ' + (edit.current_gap || '');
 
         const text = document.createElement('div');
         text.className = 'ats-edit-text';
@@ -2001,7 +2020,7 @@
         copyBtn.style.marginTop = '4px';
         copyBtn.style.padding = '6px 10px';
         copyBtn.style.fontSize = '12px';
-        copyBtn.textContent = 'Скопировать формулировку';
+        copyBtn.textContent = _t('btn_copy_wording', 'Скопировать формулировку');
         copyBtn.addEventListener('click', async () => {
           try {
             await navigator.clipboard.writeText(edit.suggested_text || '');
@@ -2025,9 +2044,122 @@
       checkBtn.click();
     };
 
+    // Показываем кнопку отклика, если активная вкладка — поддерживаемый сайт
+    const submitBtn = $('btn-ats-submit');
+    const source = currentVacancy.source || '';
+    if (['hh.ru', 'linkedin', 'upwork'].includes(source)) {
+      submitBtn.hidden = false;
+    } else {
+      submitBtn.hidden = true;
+    }
+
     $('ats-result').hidden = false;
     return id;
   }
+
+  // ---------- отклик на вакансию (submit) ----------
+
+  let atsSubmitLock = false;
+
+  $('btn-ats-submit').addEventListener('click', async () => {
+    if (atsSubmitLock) return;
+    clearAtsError();
+
+    const keyCheck = await hasApiKeyForActiveModel();
+    if (!keyCheck.ok) { showNoApiKey(keyCheck.modelKey); return; }
+
+    const btn = $('btn-ats-submit');
+    const statusEl = $('ats-submit-status');
+
+    atsSubmitLock = true;
+    btn.disabled = true;
+    statusEl.hidden = false;
+    statusEl.textContent = _t('msg_preparing_letter', 'Готовлю сопроводительное письмо...');
+
+    try {
+      // 1. Получаем или генерируем сопроводительное письмо
+      let letterText = $('letter-text').value.trim();
+      if (!letterText) {
+        // Генерируем письмо, если его ещё нет
+        const { letterLang } = await chrome.storage.local.get('letterLang');
+        let lang = letterLang || 'auto';
+        if (lang === 'auto') {
+          lang = currentVacancy.source === 'hh.ru' ? 'ru'
+            : currentVacancy.source === 'linkedin' || currentVacancy.source === 'upwork' ? 'en'
+            : 'ru';
+        }
+
+        const resumeText = $('ats-inline-resume') ? $('ats-inline-resume').value.trim() : '';
+        // ensureSavedResumes вызывается ради сайд-эффекта (миграция legacy-профилей)
+        await JFC.ensureSavedResumes();
+        if (!resumeText) {
+          showAtsError(_t('msg_no_resume_select', 'Нет текста резюме — выбери резюме в поле выше.'));
+          return;
+        }
+
+        statusEl.textContent = _t('msg_writing_letter', 'Пишу сопроводительное письмо...');
+        const letterResp = await sendWithRetry({
+          type: 'WRITE_LETTER',
+          vacancy: currentVacancy,
+          profile: resumeText,
+          sellingPoints: [],
+          flags: [],
+          lang,
+          tone: ($('letter-tone') && $('letter-tone').value) || 'neutral'
+        }, null, '');
+
+        if (!letterResp.ok) {
+          showAtsError(_t('msg_letter_failed', 'Не удалось сгенерировать письмо') + ': ' + (letterResp.message || _t('msg_unknown_error', 'ошибка')));
+          return;
+        }
+        letterText = letterResp.result;
+      }
+
+      // 2. Отправляем отклик
+      statusEl.textContent = _t('msg_submitting', 'Отправляю отклик на сайт вакансии...');
+
+      const resp = await chrome.runtime.sendMessage({
+        type: 'SUBMIT_ATS_RESPONSE',
+        vacancy: currentVacancy,
+        letter: letterText,
+        resumeId: activeAtsResumeId
+      });
+
+      if (!resp || !resp.ok) {
+        showAtsError(_t('msg_submit_error', 'Ошибка отклика') + ': ' + ((resp && resp.message) || _t('msg_no_response', 'расширение не ответило')));
+        return;
+      }
+
+      statusEl.textContent = _t('msg_submitted', 'Отклик отправлен!');
+      flashButton(btn, _t('msg_submitted_short', 'Отправлено!'));
+
+      // Сохраняем в историю
+      const entry = {
+        id: makeCheckId(),
+        type: 'ats-submit',
+        title: currentVacancy.title || 'Вакансия',
+        source: currentVacancy.source || '',
+        url: currentVacancy.url || '',
+        letter: letterText,
+        submittedAt: Date.now(),
+        result: resp
+      };
+      const { history } = await chrome.storage.local.get('history');
+      const items = Array.isArray(history) ? history : [];
+      items.unshift(entry);
+      await chrome.storage.local.set({ history: items.slice(0, HISTORY_LIMIT) });
+      const { submitsCount } = await chrome.storage.local.get('submitsCount');
+      await chrome.storage.local.set({ submitsCount: (submitsCount || 0) + 1 });
+
+      setTimeout(() => { statusEl.hidden = true; }, 5000);
+    } catch (e) {
+      showAtsError('Ошибка при отклике: ' + (e.message || 'неизвестная ошибка'));
+      console.error(e);
+    } finally {
+      atsSubmitLock = false;
+      btn.disabled = false;
+    }
+  });
 
   function renderAtsReqList(wrap, reqs) {
     wrap.textContent = '';
@@ -2065,7 +2197,7 @@
       if (item.matched_as) {
         const matched = document.createElement('div');
         matched.className = 'ats-matched-snippet';
-        matched.textContent = 'В резюме: ' + item.matched_as + (item.note ? ' (' + item.note + ')' : '');
+        matched.textContent = _t('label_in_resume', 'В резюме') + ': ' + item.matched_as + (item.note ? ' (' + item.note + ')' : '');
         row.appendChild(matched);
       } else if (item.note) {
         const note = document.createElement('div');
@@ -2433,7 +2565,7 @@
   if ($('btn-export-ats-report')) {
     $('btn-export-ats-report').addEventListener('click', () => {
       if (!lastAtsAuditResult) {
-        showError('Сначала запусти оценку резюме во вкладке «Профиль».');
+        showError(_t('msg_run_review_first', 'Сначала запусти оценку резюме во вкладке «Профиль».'));
         return;
       }
       openReportInNewTab(buildAtsAuditReportHtml(lastAtsAuditResult, auditedResumeName()));
@@ -2443,7 +2575,7 @@
   if ($('btn-download-ats-report')) {
     $('btn-download-ats-report').addEventListener('click', () => {
       if (!lastAtsAuditResult) {
-        showError('Сначала запусти оценку резюме во вкладке «Профиль».');
+        showError(_t('msg_run_review_first', 'Сначала запусти оценку резюме во вкладке «Профиль».'));
         return;
       }
       const html = buildAtsAuditReportHtml(lastAtsAuditResult, auditedResumeName());

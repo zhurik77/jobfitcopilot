@@ -5,94 +5,102 @@
 // Правило no-undef ловит ровно этот класс ошибок.
 
 // Проглоченная ошибка в catch и `_`-заглушка в деструктуризации — осознанный
-// приём в этом коде (сетевые сбои и необязательные поля), а не забытый мусор.
+// приём в этом коде (сетевые сбои и необязательные поля), а не забытые переменные.
+
 const UNUSED_VARS = {
   args: 'none',
   caughtErrors: 'none',
+  ignoreRestSiblings: true,
   varsIgnorePattern: '^_',
 };
 
-const browserGlobals = {
-  document: 'readonly',
-  window: 'readonly',
-  navigator: 'readonly',
-  location: 'readonly',
-  console: 'readonly',
-  setTimeout: 'readonly',
-  clearTimeout: 'readonly',
-  setInterval: 'readonly',
-  clearInterval: 'readonly',
-  fetch: 'readonly',
-  Blob: 'readonly',
-  URL: 'readonly',
-  confirm: 'readonly',
-  globalThis: 'readonly',
-};
-
-module.exports = [
+// Один общий набор глобалов: расширение и сервер используют пересекающиеся
+// окружения (fetch/URL/Blob есть и в Chrome, и в Node 18+), а лишние глобалы
+// в no-undef ничего не ломают — правило ловит только обращения к несуществующим.
+// Собранные бандлы (docs/assets, server/public) из линта исключены.
+export default [
   {
-    ignores: ['node_modules/**', 'docs/**'],
+    ignores: [
+      'docs/assets/**',
+      'server/public/**',
+      'site/**',
+      'node_modules/**',
+      'server/node_modules/**',
+      'dist/**',
+      'graphify-out/**',
+    ],
   },
   {
-    // Расширение: sidepanel, options, content scripts.
-    files: ['sidepanel/**/*.js', 'options/**/*.js', 'content-scripts/**/*.js', 'shared/**/*.js'],
+    files: ['**/*.js'],
     languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'script',
-      globals: { ...browserGlobals, chrome: 'readonly', JFC: 'readonly' },
-    },
-    rules: {
-      'no-undef': 'error',
-      'no-unused-vars': ['error', UNUSED_VARS],
-      'no-redeclare': 'error',
-      'no-dupe-keys': 'error',
-      'no-dupe-args': 'error',
-      'no-unreachable': 'error',
-      'no-constant-condition': ['error', { checkLoops: false }],
-      eqeqeq: ['warn', 'smart'],
-    },
-  },
-  {
-    // Service worker: нет DOM, зато есть importScripts.
-    files: ['background.js'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'script',
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       globals: {
         chrome: 'readonly',
-        fetch: 'readonly',
-        console: 'readonly',
-        globalThis: 'readonly',
-        importScripts: 'readonly',
-        JFC: 'readonly',
-      },
-    },
-    rules: {
-      'no-undef': 'error',
-      'no-unused-vars': ['error', UNUSED_VARS],
-    },
-  },
-  {
-    // Node-скрипты: тесты и инструменты сборки скриншотов.
-    // document/window здесь легальны: код внутри page.evaluate() исполняется
-    // в браузере Playwright, хотя лежит в Node-файле.
-    files: ['tools/**/*.js', 'test/**/*.js', 'eslint.config.js'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'commonjs',
-      globals: {
         require: 'readonly',
         module: 'writable',
         process: 'readonly',
         console: 'readonly',
         __dirname: 'readonly',
+        __filename: 'readonly',
         globalThis: 'readonly',
         setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        queueMicrotask: 'readonly',
+        structuredClone: 'readonly',
+        fetch: 'readonly',
         Blob: 'readonly',
         URL: 'readonly',
+        URLSearchParams: 'readonly',
+        Headers: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        AbortController: 'readonly',
+        performance: 'readonly',
+        crypto: 'readonly',
         document: 'readonly',
         window: 'readonly',
         navigator: 'readonly',
+        location: 'readonly',
+        history: 'readonly',
+        matchMedia: 'readonly',
+        navigation: 'readonly',
+        importScripts: 'readonly',
+        MutationObserver: 'readonly',
+        ResizeObserver: 'readonly',
+        IntersectionObserver: 'readonly',
+        DOMParser: 'readonly',
+        CustomEvent: 'readonly',
+        Event: 'readonly',
+        EventTarget: 'readonly',
+        HTMLElement: 'readonly',
+        Node: 'readonly',
+        CSS: 'readonly',
+        alert: 'readonly',
+        confirm: 'readonly',
+        prompt: 'readonly',
+        getComputedStyle: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        indexedDB: 'readonly',
+        caches: 'readonly',
+        clients: 'readonly',
+        self: 'readonly',
+        addEventListener: 'readonly',
+        removeEventListener: 'readonly',
+        dispatchEvent: 'readonly',
+        postMessage: 'readonly',
+        onmessage: 'writable',
+        FileReader: 'readonly',
+        FormData: 'readonly',
+        Buffer: 'readonly',
+        JFC: 'readonly',
       },
     },
     rules: {

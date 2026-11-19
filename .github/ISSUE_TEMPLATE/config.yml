@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Telegram
+    url: https://t.me/macuniverse_it
+    about: Быстрая связь с автором
+  - name: Email
+    url: mailto:macuniverse.it@gmail.com
+    about: Для конфиденциальных вопросов

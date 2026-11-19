@@ -38,7 +38,7 @@
     const show = apiKeyInputs.deepseek.type === 'password';
     const type = show ? 'text' : 'password';
     for (const key of Object.keys(apiKeyInputs)) apiKeyInputs[key].type = type;
-    e.target.textContent = show ? 'скрыть' : 'показать';
+    e.target.textContent = show ? _t('btn_hide', 'скрыть') : _t('btn_show', 'показать');
   });
 
   saveBtn.addEventListener('click', async () => {
@@ -53,9 +53,9 @@
         model: modelSelect.value,
         letterLang: langSelect.value
       });
-      flashButton(saveBtn, 'Сохранено ✓');
+      flashButton(saveBtn, _t('msg_saved', 'Сохранено') + ' ✓');
     } catch (err) {
-      $('opt-error').textContent = 'Не удалось сохранить: ' + err;
+      $('opt-error').textContent = _t('msg_save_failed', 'Не удалось сохранить') + ': ' + err;
     }
   });
 
@@ -91,9 +91,10 @@
       resumeMeta.textContent = '';
       return;
     }
-    const origin = r.source === 'hh-import' ? 'импортировано с hh.ru' : 'введено вручную';
-    const when = r.updatedAt ? ' · обновлено ' + new Date(r.updatedAt).toLocaleString('ru-RU') : '';
-    resumeMeta.textContent = 'Источник: ' + origin + when;
+    const lang = (globalThis.JFC_I18N && globalThis.JFC_I18N.getLanguage()) || 'ru';
+    const origin = r.source === 'hh-import' ? _t('label_imported_from_hh', 'импортировано с hh.ru') : _t('label_manual_entry', 'введено вручную');
+    const when = r.updatedAt ? ' · ' + _t('label_updated', 'обновлено') + ' ' + new Date(r.updatedAt).toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU') : '';
+    resumeMeta.textContent = _t('label_source', 'Источник') + ': ' + origin + when;
   }
 
   async function persistSavedResumes() {
@@ -131,7 +132,7 @@
     r.name = name;
     await persistSavedResumes();
     renderResumeSelect();
-    flashButton($('opt-resume-rename'), 'Готово ✓');
+    flashButton($('opt-resume-rename'), _t('msg_done', 'Готово') + ' ✓');
   });
 
   $('opt-resume-save-text').addEventListener('click', async () => {
@@ -141,17 +142,17 @@
     r.updatedAt = Date.now();
     await persistSavedResumes();
     renderSelectedResume();
-    flashButton($('opt-resume-save-text'), 'Сохранено ✓');
+    flashButton($('opt-resume-save-text'), _t('msg_saved', 'Сохранено') + ' ✓');
   });
 
   $('opt-resume-delete').addEventListener('click', async () => {
     if (savedResumesCache.length <= 1) {
-      resumeMeta.textContent = 'Нельзя удалить единственное резюме.';
+      resumeMeta.textContent = _t('msg_cannot_delete_last', 'Нельзя удалить единственное резюме.');
       return;
     }
     const idx = savedResumesCache.findIndex(x => x.id === activeResumeIdCache);
     if (idx === -1) return;
-    if (!confirm('Удалить резюме «' + savedResumesCache[idx].name + '»?')) return;
+    if (!confirm(_t('msg_confirm_delete', 'Удалить резюме') + ' «' + savedResumesCache[idx].name + '»?')) return;
     savedResumesCache.splice(idx, 1);
     activeResumeIdCache = savedResumesCache[0].id;
     await persistSavedResumes();

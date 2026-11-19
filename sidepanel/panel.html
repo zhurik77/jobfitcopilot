@@ -2,7 +2,9 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://integrate.api.nvidia.com https://api.openai.com https://api.anthropic.com https://raw.githubusercontent.com;">
   <link rel="stylesheet" href="panel.css">
+  <script src="../shared/i18n.js"></script>
   <title>Job Fit Copilot</title>
 </head>
 <body>
@@ -241,6 +243,12 @@
         <div id="ats-actionable-edits"></div>
 
         <button class="cta ghost" id="btn-ats-run-fitcheck" style="margin-top:16px;">Также проверить общее соответствие (Fit-Check)</button>
+
+        <button class="cta" id="btn-ats-submit" style="margin-top:12px;" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:6px;"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+          Откликнуться на вакансию
+        </button>
+        <div id="ats-submit-status" style="margin-top:8px; font-size:13px; color:var(--muted);" hidden></div>
       </section>
     </div>
 
@@ -464,23 +472,23 @@
   <nav class="ios-tabbar" id="tabbar">
     <button class="ios-tab-item active" data-tab="check" type="button">
       <svg class="ios-tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-      <span class="ios-tab-label">Проверка</span>
+      <span class="ios-tab-label" data-i18n="nav_analysis">Проверка</span>
     </button>
     <button class="ios-tab-item" data-tab="ats" type="button">
       <svg class="ios-tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-      <span class="ios-tab-label">ATS-разбор</span>
+      <span class="ios-tab-label" data-i18n="tab_ats">ATS-разбор</span>
     </button>
     <button class="ios-tab-item" data-tab="profile" type="button">
       <svg class="ios-tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-      <span class="ios-tab-label">Профиль</span>
+      <span class="ios-tab-label" data-i18n="nav_profile">Профиль</span>
     </button>
     <button class="ios-tab-item" data-tab="analytics" type="button">
       <svg class="ios-tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-      <span class="ios-tab-label">Аналитика</span>
+      <span class="ios-tab-label" data-i18n="nav_analytics">Аналитика</span>
     </button>
     <button class="ios-tab-item" data-tab="history" type="button">
       <svg class="ios-tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-      <span class="ios-tab-label">Журнал</span>
+      <span class="ios-tab-label" data-i18n="nav_history">Журнал</span>
     </button>
   </nav>
 

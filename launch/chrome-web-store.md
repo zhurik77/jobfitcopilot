@@ -1,200 +1,111 @@
-# Chrome Web Store — материалы для публикации
+# Chrome Web Store Listing — Job Fit Copilot
 
-Всё, что запрашивает форма Developer Dashboard, готовыми блоками.
-Копировать как есть.
-
----
-
-## 1. Карточка
-
-**Название** (макс. 45 символов, сейчас 38):
-
-```
-Job Fit Copilot — разбор вакансий
-```
-
-**Краткое описание** (макс. 132 символа, сейчас 129):
-
-```
-Разбирает вакансию по фактам вашего резюме и честно говорит, стоит ли откликаться. Свой API-ключ, без сервера посередине.
-```
-
-**Категория:** Productivity / Workflow & Planning
-**Язык:** Русский
+> **Status:** Ready for submission
+> **Developer Dashboard:** https://chrome.google.com/webstore/devconsole
 
 ---
 
-## 2. Подробное описание
+## Store Listing
 
-```
-Все инструменты для поиска работы помогают отправить БОЛЬШЕ откликов.
-Job Fit Copilot делает обратное: он говорит, на какие вакансии не стоит
-тратить вечер.
+### Extension Name
+**Job Fit Copilot** — AI Resume Analyzer & ATS Audit
 
-Откликнуться в один клик бесплатно — и поэтому бесполезно, такие отклики
-отсеиваются первыми. Отклик, у которого есть шанс, стоит 20–30 минут:
-перечитать вакансию, сопоставить с опытом, переписать резюме под ключевые
-слова, написать нешаблонное письмо. На тридцати вакансиях это двенадцать
-часов, половина из которых уходит на позиции, где вас отсеет формальный
-фильтр.
+### Short Description (132 chars max)
+Open-source AI Chrome extension for ATS resume analysis, vacancy fit scoring, and cover letter generation.
 
-Расширение открывается сбоку от вакансии и за двадцать секунд показывает,
-какие из них не стоят вашего времени — со ссылкой на конкретную строчку
-вакансии и конкретный факт из вашего резюме.
+### Detailed Description
 
-ЧТО УМЕЕТ
+**Job Fit Copilot** is an open-source Chrome extension that uses AI to analyze your resume against any job description. Get a detailed fit score, ATS compliance audit, and tailored cover letters — all inside your browser.
 
-• Разбор по факторам — база 50 и дельты за каждый фактор совпадения.
-  Каждый пункт обязан ссылаться на факт: годы, инструмент, домен, цифру.
-  Общие слова вроде «хороший кандидат» запрещены на уровне промпта.
+#### 🔍 Vacancy Fit Analysis
+Paste any job description and your resume to get an AI-powered fit score. The analysis breaks down your match by skills, experience, education, and more — with explanations for each score.
 
-• ATS-разбор под конкретное резюме — делит требования на обязательные и
-  желательные, проверяет смысловое покрытие. «Claude, промпт-инжиниринг»
-  в резюме закрывает «опыт работы с LLM» в вакансии, даже если самого
-  слова «LLM» в резюме нет.
+#### 📊 ATS Resume Audit
+See what recruiters' ATS systems see. Get actionable suggestions to improve keyword matching, formatting, and section structure. Fix gaps before submitting.
 
-• Глубокий ATS-аудит резюме — взвешенный скоринг по четырём критериям,
-  построчный разбор опыта с заменой «участвовал» на «спроектировал» и
-  измеримый результат, топ-20 подходящих ролей, карта ключевых слов и
-  чек-лист правок.
+#### 📝 Cover Letter Generator
+Generate tailored cover letters based on the job description and your resume. Choose from multiple tones (professional, enthusiastic, neutral) and languages (English, Russian).
 
-• Сопроводительные письма — собираются из сильных сторон, которые нашёл
-  разбор. Список запрещённых клише зашит в промпт.
+#### 🔄 Multi-Resume Comparison
+Compare multiple resumes side-by-side against the same vacancy. See which version scores highest and optimize your applications.
 
-• Несколько резюме — храните версии под разное позиционирование
-  и сравнивайте их под конкретные вакансии.
+#### 📈 Analytics Dashboard
+Track your application history, scores over time, and success rates. Identify which resume formats perform best.
 
-• Отчёты — выгружаются автономным HTML-файлом, который открывается
-  и печатается в PDF без интернета.
+#### 🌐 Works on
+- hh.ru
+- LinkedIn
+- Upwork
+- Any site (via manual paste)
 
-ОН НЕ ДОРИСОВЫВАЕТ ВАМ ОПЫТ
+#### 🛡️ Privacy & Security
+- Fully open source (MIT license)
+- No data collection or tracking
+- Your resume data stays in your browser
+- You choose which AI provider to use (OpenAI, Anthropic, DeepSeek, NVIDIA)
 
-У каждой предложенной правки резюме есть проверка на честность: модель
-обязана подтвердить, что формулировка опирается только на факты из вашего
-резюме. Не может подтвердить — правка не предлагается, а разрыв называется
-разрывом. Инструмент, который приукрашивает резюме, готовит вас к провалу
-на первом же техническом собеседовании.
+#### 🤖 Supported AI Providers
+- OpenAI (GPT-4o, GPT-4o-mini, GPT-4-turbo)
+- Anthropic (Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku)
+- DeepSeek (DeepSeek V3, DeepSeek R1)
+- NVIDIA NIM (Llama 3.1 Nemotron, Mistral Large)
 
-ПРИВАТНОСТЬ
-
-У проекта нет серверов. Ни бэкенда, ни базы, ни аккаунтов, ни аналитики.
-Ключи и резюме хранятся в chrome.storage.local вашего браузера. Запрос идёт
-напрямую от вас к тому AI-провайдеру, чей ключ вы вставили.
-
-Это проверяется, а не принимается на веру: код открыт (MIT), и во всём
-расширении ровно один сетевой вызов.
-
-Расширение читает только ту страницу, которая уже открыта у вас во вкладке.
-Оно не листает вакансии в фоне, не обходит авторизацию и не отправляет
-отклики за вас — это осознанное ограничение.
-
-МОДЕЛИ (нужен свой ключ)
-
-• DeepSeek V4 Flash — NVIDIA NIM, есть бесплатный тариф
-• GLM-5.2 — NVIDIA NIM, есть бесплатный тариф
-• GPT-4.1 — OpenAI
-• Claude Sonnet 4.6 — Anthropic
-
-Начать можно бесплатно: бесплатного тарифа NVIDIA NIM хватает на
-ежедневный поиск.
-
-ПОДДЕРЖИВАЕМЫЕ ПЛОЩАДКИ
-
-hh.ru · LinkedIn · Upwork
-
-Открытый исходный код: github.com/zhurik77/jobfitcopilot
-```
+#### 🧪 555+ Tests
+The extension has a comprehensive test suite covering i18n, server routes, scoring algorithms, and error handling.
 
 ---
 
-## 3. Обоснование разрешений
+### Category
+Productivity > Developer Tools
 
-Магазин отклоняет заявку, если обоснование общее («нужно для работы
-расширения»). Формулировки ниже привязаны к конкретной функции.
+### Language
+English, Russian
 
-| Поле формы | Что вставить |
-|---|---|
-| `storage` | Хранит API-ключ пользователя, тексты его резюме и историю проверенных вакансий локально в браузере. Расширение не имеет сервера, поэтому это единственное место хранения настроек между сессиями. |
-| `activeTab` | Считывает текст вакансии со страницы, которую пользователь сейчас открыл, в момент нажатия кнопки разбора. Без этого разбирать было бы нечего — пользователю пришлось бы копировать текст вручную. |
-| `scripting` | Внедряет скрипт-экстрактор на страницу вакансии, если она была открыта до установки расширения и статический content script в неё ещё не попал. |
-| `sidePanel` | Весь интерфейс расширения — это боковая панель рядом с вакансией, чтобы пользователь видел разбор и текст вакансии одновременно. |
-| `tabs` | Определяет URL активной вкладки, чтобы выбрать подходящий экстрактор (hh.ru / LinkedIn / Upwork), и открывает сформированный HTML-отчёт в новой вкладке. |
-| Host: `*.hh.ru`, `*.linkedin.com`, `*.upwork.com` | Чтение разметки страницы вакансии на трёх поддерживаемых площадках. Расширение активно только на страницах вакансий и резюме этих сайтов. |
-| Host: `integrate.api.nvidia.com`, `api.openai.com`, `api.anthropic.com` | Отправка запроса на разбор выбранному AI-провайдеру по ключу пользователя. Прямой вызов из браузера — единственный способ обойтись без собственного сервера-посредника. |
+### Homepage URL
+https://github.com/zhurik77/jobfitcopilot
 
-**Обоснование удалённого кода:** расширение не загружает и не исполняет
-удалённый код. Все скрипты входят в пакет. Ответы API обрабатываются как
-данные (`JSON.parse`), не как код.
+### Support URL
+https://github.com/zhurik77/jobfitcopilot/issues
 
 ---
 
-## 4. Раскрытие использования данных
+## Screenshots (1280x800 or 640x400)
 
-Форма «Privacy practices» → отметить:
-
-- [x] **Personally identifiable information** — резюме может содержать имя и
-      контакты. Передаётся только выбранному пользователем AI-провайдеру,
-      по его собственному ключу, для формирования разбора.
-- [ ] Health information — нет
-- [ ] Financial and payment information — нет
-- [ ] Authentication information — **нет.** API-ключ провайдера не является
-      учётными данными пользователя в понимании этого поля, но если модератор
-      попросит — отметить и пояснить, что ключ вводится вручную и хранится
-      локально.
-- [ ] Personal communications — нет
-- [ ] Location — нет
-- [ ] Web history — нет
-- [ ] User activity — нет
-- [ ] Website content — **да**, текст вакансии со страницы, которую открыл
-      пользователь.
-
-Три обязательных подтверждения:
-
-- [x] Данные не продаются и не передаются третьим лицам, кроме случаев,
-      одобренных пользователем (выбор AI-провайдера).
-- [x] Данные не используются и не передаются для целей, не связанных с
-      основной функцией.
-- [x] Данные не используются и не передаются для определения
-      кредитоспособности или выдачи займов.
-
-**Ссылка на политику конфиденциальности:**
-`https://github.com/zhurik77/jobfitcopilot/blob/master/PRIVACY.md`
+1. **Vacancy Fit Analysis** — Main scoring interface
+2. **ATS Resume Audit** — Compliance check with suggestions
+3. **Cover Letter Generator** — Letter with tone/language selection
+4. **Analytics Dashboard** — History and success tracking
+5. **Multi-Resume Comparison** — Side-by-side comparison
+6. **Settings** — Provider and model configuration
 
 ---
 
-## 5. Графика
+## Promotional Images
 
-| Ассет | Размер | Откуда взять |
-|---|---|---|
-| Иконка | 128×128 PNG | `icons/icon128.png` — уже есть |
-| Скриншоты (1–5 шт) | **1280×800** или 640×400 PNG | Нужно снять заново: текущие `docs/screenshot-*.jpg` сняты в ширину side panel (380px) и в требуемый размер не годятся |
-| Малый промо-тайл | 440×280 PNG | Нужно нарисовать |
-| Крупный промо-тайл (опц.) | 920×680 PNG | Нужно нарисовать |
+### Small Promo Tile (440x280)
+Text: "AI Resume Analyzer — Open Source"
 
-Скриншоты для магазина должны показывать интерфейс на фоне реальной
-страницы вакансии, а не панель в вакууме — так модератор и пользователь
-понимают контекст.
+### Large Promo Tile (920x680)
+Text: "Job Fit Copilot — Open-Source AI Resume Analysis & ATS Audit"
 
-Порядок скриншотов задаёт историю, поэтому:
-
-1. Панель с готовым разбором рядом с вакансией на hh.ru — вердикт и дельты.
-2. ATS-разбор: обязательные требования, покрытые и непокрытые.
-3. Глубокий аудит резюме с оценкой и построчными переформулировками.
-4. Выгруженный HTML-отчёт.
-5. Настройки: выбор модели и поле для своего ключа (подчёркивает приватность).
+### Marquee Promo Tile (1400x560)
+Text: "555+ tests • MIT license • Free forever"
 
 ---
 
-## 6. Перед отправкой
+## Privacy Practices
 
-- [ ] `npm run check` проходит.
-- [ ] Версия в `manifest.json` совпадает с версией загружаемого zip.
-- [ ] Zip собран без `node_modules`, `test/`, `tools/` — это делает
-      `release.yml` на тег-пуше, взять артефакт оттуда.
-- [ ] `PRIVACY.md` доступен по публичной ссылке и её же указали в форме.
-- [ ] Скриншоты 1280×800 сняты и показывают реальный интерфейс.
-- [ ] Аккаунт разработчика оплачен (единоразовые $5).
+### Single Purpose
+Analyze resumes and job descriptions to provide fit scoring, ATS audit, and cover letter generation.
 
-**Ожидание модерации:** обычно несколько дней, но расширения с доступом к
-host permissions на сторонних сайтах проверяют дольше — закладывайте до
-двух недель и не привязывайте к дате дедлайн запуска на других площадках.
+### Permissions Justification
+- **storage:** Save resume data and settings locally
+- **sidePanel:** Display analysis results in Chrome sidebar
+- **scripting:** Extract resume text from supported platforms (hh.ru, LinkedIn)
+- **host permissions:** Read vacancy and resume content on hh.ru, LinkedIn, Upwork
+
+### Data Usage
+- No user data is collected or transmitted to third parties
+- Resume text is sent only to the AI provider you explicitly configure
+- All settings and resume data are stored locally in Chrome storage
+- No analytics, no tracking, no ads
