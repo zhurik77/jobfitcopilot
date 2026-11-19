@@ -12,7 +12,7 @@ test('createLlmClient: status check', async () => {
 
   const client = createLlmClient({ fetchImpl: fakeFetch, baseUrl: 'http://localhost:8000/v1' });
   const st = await client.status();
-  assert.equal(st.connected, true);
+  assert.equal(st.ok, true);
   assert.equal(st.details.status, 'ok');
 });
 

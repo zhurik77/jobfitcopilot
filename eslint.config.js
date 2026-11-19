@@ -27,6 +27,7 @@ export default [
       'node_modules/**',
       'server/node_modules/**',
       'dist/**',
+      'graphify-out/**',
     ],
   },
   {

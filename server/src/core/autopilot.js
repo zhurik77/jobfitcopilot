@@ -21,11 +21,12 @@ export class AutopilotEngine {
    *   sleep?: (ms: number) => Promise<void>
    * }} deps
    */
-  constructor({ db, sites, bridge, llm, now = Date.now, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+  constructor({ db, sites, bridge, llm, monitor, now = Date.now, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
     this.db = db;
     this.sites = sites;
     this.bridge = bridge;
     this.llm = llm;
+    this.monitor = monitor;
     this.now = now;
     this.sleep = sleep;
 
@@ -159,6 +160,7 @@ export class AutopilotEngine {
       this.isCycleRunning = false;
     }
 
+    if (this.monitor) this.monitor.recordAutopilotCycle(report);
     return report;
   }
 

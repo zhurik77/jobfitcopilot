@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="../sidepanel/panel.css">
-  <title>Job Fit Copilot — настройки</title>
+  <script src="../shared/i18n.js"></script>
+  <title data-i18n="settings_title">Job Fit Copilot — настройки</title>
   <style>
     .opt-wrap { max-width: 620px; margin: 0 auto; padding: 28px 20px 60px; }
     .opt-title { font-size: 24px; font-weight: 800; margin: 10px 0 6px; letter-spacing: -0.01em; }
     .opt-sub { color: var(--muted); font-size: 13.5px; margin: 0 0 22px; line-height: 1.55; }
-    .opt-field { margin-bottom: 4px; }
-    .opt-hint { color: var(--muted); font-size: 12.5px; margin-top: 6px; line-height: 1.5; }
-    .opt-hint a { color: var(--amber-ink); }
-    .opt-key-label { display: block; color: var(--muted); font-size: 12px; margin: 12px 0 4px; }
-    .opt-key-label:first-child { margin-top: 0; }
+    .opt-field { margin-bottom: 16px; }
+    .opt-field label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .opt-key-label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; color: var(--ink); }
+    .opt-hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; line-height: 1.5; }
     .opt-row { display: flex; gap: 8px; margin-top: 8px; }
     .opt-row > input { flex: 1; }
     input[type="password"], input[type="text"], select {
@@ -35,11 +35,11 @@
 <body>
   <div class="opt-wrap">
     <span class="label">macuniverse it · job fit copilot</span>
-    <h1 class="opt-title">Настройки</h1>
+    <h1 class="opt-title" data-i18n="settings_title">Настройки</h1>
     <p class="opt-sub">Один раз: вставь ключ активного провайдера, выбери модель и проверь профиль кандидата. Всё хранится локально в браузере (chrome.storage.local) и уходит только напрямую в API выбранного провайдера.</p>
 
     <div class="card">
-      <div class="card-head"><span class="label">API-ключи</span></div>
+      <div class="card-head"><span class="label" data-i18n="settings_api_keys">API-ключи провайдеров</span></div>
       <div class="opt-field">
         <label class="opt-key-label" for="opt-apikey-deepseek">DeepSeek V4 Flash (NVIDIA NIM)</label>
         <input type="password" id="opt-apikey-deepseek" placeholder="nvapi-..." autocomplete="off">
@@ -52,65 +52,64 @@
 
         <label class="opt-key-label" for="opt-apikey-anthropic">Anthropic</label>
         <input type="password" id="opt-apikey-anthropic" placeholder="sk-ant-..." autocomplete="off">
-
-        <div class="opt-hint">
-          NVIDIA NIM — <a href="https://build.nvidia.com/" target="_blank" rel="noopener">build.nvidia.com</a> (один ключ на обе модели, если он общий на аккаунт).
-          OpenAI — <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
-          Anthropic — <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a>.
-          Нужен только ключ активной ниже модели, остальные можно оставить пустыми.
-          Хранится только в этом браузере. <a href="#" id="opt-toggle-key">показать</a>
-        </div>
+      </div>
+      <div class="opt-hint">
+        NVIDIA NIM — бесплатный ключ на <a href="https://build.nvidia.com/" target="_blank" rel="noopener">build.nvidia.com</a> (один ключ на обе модели, если он общий на аккаунт).
+        OpenAI — <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
+        Anthropic — <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a>.
+        Нужен только ключ активной ниже модели, остальные можно оставить пустыми.
+        Хранится только в этом браузере. <a href="#" id="opt-toggle-key">показать</a>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-head"><span class="label">Активная модель</span></div>
+      <div class="card-head"><span class="label" data-i18n="settings_active_model">Активная модель</span></div>
       <select id="opt-model">
         <option value="deepseek">DeepSeek V4 Flash (NVIDIA NIM)</option>
         <option value="glm">GLM-5.2 (NVIDIA NIM)</option>
         <option value="openai">GPT-4.1 (OpenAI)</option>
-        <option value="anthropic">Claude Sonnet 4.6 (Anthropic)</option>
+        <option value="anthropic">Claude Sonnet 5 (Anthropic)</option>
       </select>
-      <div class="opt-hint">Какой ключ выше используется — определяется этим выбором. Пригодится как запасной вариант, если NVIDIA NIM лимитит запросы.</div>
     </div>
 
     <div class="card">
-      <div class="card-head">
-        <span class="label">Резюме кандидата</span>
-        <button class="linkbtn" id="opt-resume-add">+ новое резюме</button>
+      <div class="card-head"><span class="label" data-i18n="profile_title">Профиль кандидата</span></div>
+      <div class="opt-hint" style="margin-bottom:12px;">
+        <span data-i18n="profile_add">Добавить резюме</span>
+        <button class="cta ghost" id="opt-resume-add" style="margin-left:8px;">+ новое резюме</button>
       </div>
 
       <select id="opt-resume-select"></select>
 
       <div class="opt-row">
-        <input type="text" id="opt-resume-name" placeholder="Название резюме (например, AI-automation / Business Analyst)">
+        <input type="text" id="opt-resume-name" data-i18n-placeholder="profile_name_placeholder" placeholder="Название резюме (например, AI-automation / Business Analyst)">
         <button class="cta ghost" id="opt-resume-rename">Переименовать</button>
       </div>
 
-      <textarea id="opt-full-resume" rows="12" placeholder="Вставь сюда полный текст этого резюме с hh.ru/LinkedIn..."></textarea>
+      <textarea id="opt-full-resume" rows="12" data-i18n-placeholder="profile_text_placeholder" placeholder="Вставь сюда полный текст этого резюме с hh.ru/LinkedIn..."></textarea>
 
       <div class="opt-row">
-        <button class="cta ghost" id="opt-resume-save-text">Сохранить текст</button>
-        <button class="cta ghost" id="opt-resume-delete">Удалить резюме</button>
+        <button class="cta ghost" id="opt-resume-save-text" data-i18n="btn_save">Сохранить текст</button>
+        <button class="cta ghost" id="opt-resume-delete" data-i18n="btn_delete">Удалить резюме</button>
       </div>
 
       <div class="opt-hint" id="opt-resume-meta"></div>
-      <div class="opt-hint">Один и тот же список используется во вкладке «Профиль» и в ATS-разборе: держите здесь несколько версий позиционирования (например, «AI-automation» и «Business Analyst»), чтобы сравнивать их под конкретные вакансии на hh.ru/LinkedIn.</div>
+      <div class="opt-hint">Один и тот же список используется во вкладке «Профиль» и в ATS-разборе: держите здесь несколько версий позиционирования (например, «AI-automation» и «Business Analyst»), чтобы сравнивать их под одну вакансию.</div>
     </div>
 
     <div class="card">
-      <div class="card-head"><span class="label">Язык писем по умолчанию</span></div>
+      <div class="card-head"><span class="label" data-i18n="label_letter_lang">Язык письма по умолчанию</span></div>
       <select id="opt-lang">
-        <option value="auto">Автоопределение по площадке (hh.ru — русский, LinkedIn/Upwork — английский)</option>
-        <option value="ru">Всегда русский</option>
-        <option value="en">Всегда английский</option>
+        <option value="auto" data-i18n="settings_auto_lang">Автоопределение по площадке (hh.ru — русский, LinkedIn/Upwork — английский)</option>
+        <option value="ru" data-i18n="settings_always_ru">Всегда русский</option>
+        <option value="en" data-i18n="settings_always_en">Всегда английский</option>
       </select>
     </div>
 
-    <button class="cta" id="opt-save">Сохранить</button>
+    <button class="cta" id="opt-save" data-i18n="btn_save">Сохранить</button>
     <div class="error" id="opt-error"></div>
   </div>
-  <script src="../shared/constants.js"></script>
+
   <script src="options.js"></script>
 </body>
 </html>

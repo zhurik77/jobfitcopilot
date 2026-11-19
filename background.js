@@ -1,7 +1,8 @@
 // Job Fit Copilot — service worker: вызовы LLM-провайдеров (NVIDIA NIM / OpenAI / Anthropic) и поведение side panel.
-importScripts('shared/constants.js');
+importScripts('shared/constants.js', 'shared/i18n.js');
 
 const JFC = globalThis.JFC;
+const _t = (globalThis.JFC_I18N && globalThis.JFC_I18N.t) || ((k, f) => f);
 
 // Клик по иконке расширения открывает side panel.
 chrome.runtime.onInstalled.addListener(() => {

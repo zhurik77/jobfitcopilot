@@ -2,7 +2,24 @@
 
 All notable changes to Job Fit Copilot will be documented in this file.
 
-## [0.6.0] - 2025-07-19
+## [0.6.1] - 2025-07-27
+
+### Added
+- **i18n engine.** `shared/i18n.js` — загрузка локалей, интерполяция, data-i18n атрибуты.
+  Локали: `shared/locales/ru.json` (русский), `shared/locales/en.json` (английский).
+  Интегрировано в panel.html, options.html, background.js.
+- **Telegram bot.** `server/src/telegram.js` — long-polling бот с командами /start, /stop, /status.
+  Уведомления о новых вакансиях и смене статусов. Включается через `TELEGRAM_BOT_TOKEN`.
+- **Error monitoring.** `server/src/monitor.js` — in-process мониторинг: метрики запросов,
+  ошибок, латентности. Endpoint `/metrics` с агрегированной статистикой.
+- **Расширенные тесты.** 66 тестов для i18n (18), panel.js (42), profile (3), reports (3).
+  Полное покрытие: esc, scoreKind, computeScore, rankResumeMatches, splitExperienceHeading,
+  buildAtsAuditReportHtml, buildAnalyticsReportHtml, локали, интерполяция, XSS-экранирование.
+
+### Changed
+- **panel.js**: вердикты и сообщения об ошибках через i18n (getVerdicts(), _t()).
+- **options.html**: data-i18n атрибуты для всех заголовков, кнопок, плейсхолдеров.
+- **background.js**: загружает i18n через importScripts.
 
 ### Added
 - **CORS, Security Headers, Rate Limiting.** Сервер теперь отправляет CORS-заголовки,

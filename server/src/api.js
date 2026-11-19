@@ -111,7 +111,7 @@ async function readJson(req) {
 /**
  * @param {{ db: any, lint?: typeof lintLetter }} deps
  */
-export function createApi({ db, lint = lintLetter, llm, autopilot }) {
+export function createApi({ db, lint = lintLetter, llm, autopilot, monitor }) {
   const llmClient = llm ?? createLlmClient();
   /** @returns {Promise<boolean>} true, если запрос обработан */
   async function handle(req, res) {
@@ -155,7 +155,11 @@ export function createApi({ db, lint = lintLetter, llm, autopilot }) {
       const patch = asObject(await readJson(req));
       return autopilot ? autopilot.updateConfig(patch) : { error: 'autopilot_unavailable' };
     }
-    if (a === 'autopilot' && parts.length === 2 && parts[1] === 'run-now') {
+    if (a === 'metrics' && parts.length === 1) {
+      allow(method, 'GET');
+      return monitor ? monitor.snapshot() : { error: 'monitor_unavailable' };
+    }
+ if (a === 'autopilot' && parts.length === 2 && parts[1] === 'run-now') {
       allow(method, 'POST');
       return autopilot ? await autopilot.runCycle({ force: true }) : { error: 'autopilot_unavailable' };
     }

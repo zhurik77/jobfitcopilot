@@ -6,29 +6,21 @@ import { lintLetter } from './letter-lint.js';
 import { computeFitScore, rankResumeMatches } from './scoring.js';
 
 export class LlmError extends Error {
-  constructor(code, message, details = null) {
+  constructor(code, message, details) {
     super(message);
+    this.name = 'LlmError';
     this.code = code;
     this.details = details;
   }
 }
 
-/**
- * Создаёт клиент для взаимодействия с OpenAI-совместимым LLM-ендпоинтом.
- * @param {{
- *   baseUrl?: string,
- *   model?: string,
- *   apiKey?: string,
- *   fetchImpl?: typeof fetch,
- *   timeoutMs?: number
- * }} opts
- */
 export function createLlmClient({
   baseUrl = process.env.CUSTOM_LLM_URL ?? process.env.OPENAI_BASE_URL ?? 'http://127.0.0.1:8000/v1',
   model = process.env.CUSTOM_LLM_MODEL ?? 'gpt-4o-mini',
   apiKey = process.env.CUSTOM_LLM_API_KEY ?? '',
   fetchImpl = fetch,
   timeoutMs = 120000,
+  monitor,
 } = {}) {
   // Убираем хвостовой слеш
   const root = baseUrl.replace(/\/+$/, '');
@@ -37,6 +29,7 @@ export function createLlmClient({
   async function chatCompletion({ messages, temperature = 0.2, maxTokens = 2000, jsonMode = false }) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const startTime = Date.now();
 
     try {
       const body = {
@@ -62,10 +55,15 @@ export function createLlmClient({
 
       if (!res.ok) {
         const text = await res.text();
-        throw new LlmError('llm_http_error', `LLM вернул HTTP ${res.status}: ${text}`);
+        if (monitor) monitor.recordLlmError();
+        throw new LlmError('llm_http_error', `HTTP ${res.status} от LLM: ${text}`);
       }
 
       const data = await res.json();
+      const duration = Date.now() - startTime;
+      const tokens = data?.usage?.total_tokens || 0;
+      if (monitor) monitor.recordLlmCall(duration, tokens);
+
       const content = data?.choices?.[0]?.message?.content;
       if (!content) {
         throw new LlmError('llm_empty_response', 'LLM вернул пустой ответ');
@@ -74,9 +72,16 @@ export function createLlmClient({
       return content.trim();
     } catch (err) {
       if (err.name === 'AbortError') {
+        if (monitor) monitor.recordLlmError();
         throw new LlmError('llm_timeout', `Таймаут запроса к LLM (${timeoutMs} мс)`);
       }
-      if (err instanceof LlmError) throw err;
+      if (err instanceof LlmError) {
+        if (!err.message.startsWith('LLM вернул пустой') && !err.message.startsWith('LLM вернула невалидный')) {
+          if (monitor) monitor.recordLlmError();
+        }
+        throw err;
+      }
+      if (monitor) monitor.recordLlmError();
       throw new LlmError('llm_connection_failed', `Не удалось подключиться к LLM (${root}): ${err.message}`);
     } finally {
       clearTimeout(timer);
@@ -96,43 +101,9 @@ export function createLlmClient({
     }
   }
 
-  /** Проверка статуса LLM-ендпоинта */
-  async function status() {
-    try {
-      // Пытаемся дёрнуть /health на родителе или /models
-      const healthUrl = root.endsWith('/v1') ? root.replace(/\/v1$/, '/health') : `${root}/health`;
-      const res = await fetchImpl(healthUrl, { method: 'GET' });
-      if (res.ok) {
-        const data = await res.json();
-        return { connected: true, baseUrl: root, model, details: data };
-      }
-      // Фоллбек на список моделей
-      const modelsRes = await fetchImpl(`${root}/models`, {
-        headers: { 'Authorization': `Bearer ${apiKey}` }
-      });
-      return { connected: modelsRes.ok, baseUrl: root, model, modelsStatus: modelsRes.status };
-    } catch (err) {
-      return { connected: false, baseUrl: root, model, error: err.message };
-    }
-  }
-
-  /** ATS-сопоставление одного резюме с вакансией */
-  async function matchAts({ vacancyText, resumeText }) {
-    const reply = await chatCompletion({
-      messages: [
-        { role: 'system', content: PROMPTS.ats },
-        { role: 'user', content: `Сравни резюме с вакансией:\n\nВАКАНСИЯ:\n${vacancyText}\n\nРЕЗЮМЕ:\n${resumeText}` }
-      ],
-      temperature: 0.1,
-      jsonMode: true,
-    });
-    return parseJsonSafely(reply);
-  }
-
-  /** Глубокий технический и смысловой ATS-аудит резюме */
-  async function auditResume({ resumeText }) {
-    const trimmed = resumeText.slice(0, 4500);
-    const reply = await chatCompletion({
+  /** ATS-аудит резюме: ключевые слова, структура, опыт, метрики */
+  async function auditResume(resumeText) {
+    const raw = await chatCompletion({
       messages: [
         {
           role: 'system',
@@ -147,44 +118,68 @@ export function createLlmClient({
 Верни ТОЛЬКО валидный JSON без markdown:
 {
   "overall_ats_score": 85,
-  "score_breakdown": {
-    "keyword_match_score": 85,
-    "structure_score": 80,
-    "experience_relevance_score": 85,
-    "metrics_density_score": 90
-  },
+  "keyword_match_score": 90,
+  "structure_score": 70,
+  "experience_relevance_score": 85,
+  "metrics_density_score": 80,
   "strengths": ["...", "..."],
-  "gaps": ["..."],
-  "top_recommendations": ["..."]
+  "weaknesses": ["...", "..."],
+  "recommendations": ["...", "..."]
 }`
         },
-        { role: 'user', content: `Проведи аудит резюме кандидата:\n\n${trimmed}` }
+        { role: 'user', content: `Проведи ATS-аудит этого резюме:\n\n${resumeText}` }
       ],
       temperature: 0.1,
-      maxTokens: 1000,
+      maxTokens: 2000,
       jsonMode: true,
     });
-    return parseJsonSafely(reply);
+
+    return parseJsonSafely(raw);
   }
 
-  /** Fit-анализ вакансии по резюме */
-  async function analyzeFit({ vacancyText, resumeText }) {
-    const reply = await chatCompletion({
+  /** ATS-матчинг: сравнение резюме с требованиями вакансии */
+  async function matchAts(resumeText, vacancyText) {
+    const raw = await chatCompletion({
       messages: [
-        { role: 'system', content: PROMPTS.fit },
-        { role: 'user', content: `Оцени соответствие:\n\nВАКАНСИЯ:\n${vacancyText}\n\nРЕЗЮМЕ:\n${resumeText}` }
+        {
+          role: 'system',
+          content: PROMPTS.atsMatch
+        },
+        { role: 'user', content: `ВАКАНСИЯ:\n${vacancyText}\n\nРЕЗЮМЕ:\n${resumeText}` }
       ],
       temperature: 0.1,
+      maxTokens: 3000,
       jsonMode: true,
     });
-    return parseJsonSafely(reply);
+
+    return parseJsonSafely(raw);
   }
 
-  /** Генерация сопроводительного письма с автоматическим исправлением ошибок линтера */
-  async function generateLetter({ vacancyText, resumeText, lang = 'ru', tone = 'neutral', maxLintAttempts = 2 }) {
-    const systemPrompt = letterPrompt(lang, tone);
+  /** Анализ соответствия: насколько кандидат подходит под вакансию */
+  async function analyzeFit(resumeText, vacancyText) {
+    const raw = await chatCompletion({
+      messages: [
+        {
+          role: 'system',
+          content: PROMPTS.fitCheck
+        },
+        { role: 'user', content: `ВАКАНСИЯ:\n${vacancyText}\n\nРЕЗЮМЕ:\n${resumeText}` }
+      ],
+      temperature: 0.1,
+      maxTokens: 3000,
+      jsonMode: true,
+    });
+
+    return parseJsonSafely(raw);
+  }
+
+  /** Генерация сопроводительного письма с линтингом и повторными попытками */
+  async function generateLetter({ vacancyText, resumeText, lang = 'ru', tone = 'confident', maxLintAttempts = 3 }) {
     const messages = [
-      { role: 'system', content: systemPrompt },
+      {
+        role: 'system',
+        content: letterPrompt(lang, tone)
+      },
       {
         role: 'user',
         content: `Напиши сопроводительное письмо строго по правилам.\n\nВАКАНСИЯ:\n${vacancyText}\n\nРЕЗЮМЕ КАНДИДАТА:\n${resumeText}\n\nФормат ответа:\nСначала блок плана:\nПЛАН:\n1. ...\n2. ...\n\nЗатем текст письма:\nТЕКСТ:\n...`
@@ -198,176 +193,143 @@ export function createLlmClient({
     for (let attempt = 1; attempt <= maxLintAttempts; attempt++) {
       const raw = await chatCompletion({ messages, temperature: 0.3 + (attempt * 0.1) });
 
-      // Разделение плана и текста
-      const planMatch = raw.match(/ПЛАН:\s*([\s\S]*?)(?=ТЕКСТ:|$)/i);
-      const textMatch = raw.match(/ТЕКСТ:\s*([\s\S]*)/i);
+      const planMatch = raw.match(/ПЛАН:\s*([\s\S]*?)(?=ТЕКСТ:|$)/);
+      const textMatch = raw.match(/ТЕКСТ:\s*([\s\S]*)/);
 
-      lastPlan = planMatch ? planMatch[1].trim() : 'Автоматический план';
+      lastPlan = planMatch ? planMatch[1].trim() : '';
       lastText = textMatch ? textMatch[1].trim() : raw.trim();
+      lastLint = lintLetter(lastText);
 
-      lastLint = lintLetter(lastText, { lang });
-
-      if (lastLint.ok) {
-        return { plan: lastPlan, text: lastText, lint: lastLint, attempts: attempt };
-      }
-
-      // Если линтер нашёл ошибки, передаём их модели для самокоррекции
-      const errorList = lastLint.issues
-        .filter(i => i.severity === 'error')
-        .map(i => `- ${i.rule}: ${i.message} (фрагмент: "${i.excerpt || ''}")`)
-        .join('\n');
-
-      messages.push({ role: 'assistant', content: raw });
-      messages.push({
-        role: 'user',
-        content: `Письмо не прошло проверку качества. Исправь следующие ошибки и верни исправленный ТЕКСТ (120-180 слов, без клише, без формулировок выводов за читателя):\n${errorList}`
-      });
+      if (lastLint.ok) break;
     }
 
-    return { plan: lastPlan, text: lastText, lint: lastLint, attempts: maxLintAttempts, needsManualReview: !lastLint.ok };
+    return { text: lastText, plan: lastPlan, lint: lastLint };
   }
 
-  /** Ответы на вопросы работодателя из формы отклика на основе резюме */
-  async function answerQuestions({ questions, resumeText, vacancyText }) {
-    if (!questions || questions.length === 0) return [];
+  /** Ответы на вопросы работодателя */
+  async function answerQuestions({ vacancy, resumeText }) {
+    const form = vacancy.form;
+    if (!form?.questions?.length) return [];
 
-    const questionsFormatted = questions.map(q => {
-      let desc = `ID: "${q.id}", Вопрос: "${q.text}", Тип: ${q.kind}`;
-      if (q.kind === 'choice' && q.options) {
-        desc += `, Варианты: [${q.options.map(o => `value: "${o.value}", label: "${o.label}"`).join('; ')}]`;
-        if (q.allowsOwn) desc += ` (разрешён свой вариант: value "open")`;
-      }
-      return desc;
+    const questionsText = form.questions.map((q, i) => {
+      const options = q.options?.length ? `\n  Варианты: ${q.options.join(', ')}` : '';
+      const multiple = q.multiple ? ' (можно несколько)' : '';
+      return `${i + 1}. [${q.id}] ${q.title}${options}${multiple}`;
     }).join('\n');
 
-    const prompt = `Ты заполняешь анкету работодателя для отклика на вакансию.
-Опирайся СТРОГО на факты из резюме. Не придумывай того, чего в резюме нет.
-
-РЕЗЮМЕ:
-${resumeText}
-
-ВАКАНСИЯ:
-${vacancyText}
-
-ВОПРОСЫ РАБОТОДАТЕЛЯ:
-${questionsFormatted}
-
-Верни JSON-массив с ответами вида:
-[
-  { "id": "идентификатор_вопроса", "text": "ответ для текстового вопроса" },
-  { "id": "идентификатор_вопроса", "values": ["value_выбранного_варианта"] },
-  { "id": "идентификатор_вопроса", "values": ["open"], "own": "свой вариант ответа" }
-]
-Если в резюме нет ответа на вопрос (например, зарплатные ожидания или точная дата выхода), оставь ответ пустым: { "id": "...", "text": "" }.`;
-
-    const reply = await chatCompletion({
-      messages: [{ role: 'user', content: prompt }],
+    const raw = await chatCompletion({
+      messages: [
+        {
+          role: 'system',
+          content: `Ты — помощник по заполнению форм отклика на вакансии.
+Ответь на вопросы работодателя на основе резюме кандидата.
+Для каждого вопроса верни объект с id и текстом ответа (или values для выбора).
+Если вопрос с выбором — выбери наиболее подходящий вариант.
+Верни JSON-массив: [{ "id": "q1", "text": "..." }]`
+        },
+        {
+          role: 'user',
+          content: `Вакансия: ${vacancy.title}\nКомпания: ${vacancy.company}\n\nВопросы:\n${questionsText}\n\nРезюме:\n${resumeText}`
+        }
+      ],
       temperature: 0.1,
+      maxTokens: 2000,
       jsonMode: true,
     });
 
-    const parsed = parseJsonSafely(reply);
-    return Array.isArray(parsed) ? parsed : (parsed.answers || []);
+    return parseJsonSafely(raw);
   }
 
-  /** Комплексный автономный аудит и обработка вакансии через FSM */
+  /** Полный конвейер обработки вакансии */
   async function processVacancyWorkflow({ vacancy, resumes, db }) {
     const key = vacancy.key;
-    const desc = vacancy.description || [vacancy.snippet, (vacancy.skills || []).join(', ')].filter(Boolean).join('\n') || '';
-    const vacancyText = `Должность: ${vacancy.title}\nКомпания: ${vacancy.company || ''}\nОпыт: ${vacancy.experience || ''}\nЗарплата: ${vacancy.salary || ''}\nСтек и требования:\n${desc}`;
+    const status = vacancy.status;
+    const vacancyText = vacancy.description;
 
-    // Глубокий интеллектуальный отбор пула резюме для ATS-матчинга
-    // Извлекаем ключевые смысловые токены из вакансии (заголовок, стек, сниппет)
-    const searchTokens = `${vacancy.title || ''} ${vacancy.snippet || ''} ${(vacancy.skills || []).join(' ')}`
-      .toLowerCase()
-      .split(/[^a-zа-я0-9+#_]+/i)
-      .filter((w) => w.length > 2);
+    if (!vacancyText) {
+      return { status: 'no_description', key };
+    }
 
-    const scoredCandidates = [...resumes].filter(r => r.text).map((r) => {
-      const rLower = (r.text + ' ' + (r.title || r.name || '')).toLowerCase();
-      let overlap = 0;
-      for (const token of searchTokens) {
-        if (rLower.includes(token)) overlap += 1;
+    // ATS-матчинг всех резюме
+    const matchResults = [];
+    for (const resume of resumes) {
+      try {
+        const match = await matchAts(resume.text, vacancyText);
+        const score = computeFitScore(match);
+        matchResults.push({ resumeId: resume.id, name: resume.name, result: match, score });
+      } catch (err) {
+        console.warn(`[llm] matchAts failed for ${resume.name}: ${err.message}`);
       }
-      return { resume: r, overlap };
-    }).sort((a, b) => b.overlap - a.overlap);
+    }
 
-    // Берём топ-3 наиболее релевантных резюме для глубокого LLM ATS-разбора
-    const candidatePool = scoredCandidates.slice(0, 3).map((sc) => sc.resume);
+    if (matchResults.length === 0) {
+      return { status: 'no_match', key };
+    }
 
-    // 1. ATS Matching с кандидатами
-    const scoredResumes = [];
-    for (const r of candidatePool) {
-      const resumeSnippet = r.text.slice(0, 5000);
-      const atsResult = await matchAts({ vacancyText, resumeText: resumeSnippet });
-      const overall = Number(atsResult.overall_match_score ?? 0);
-      db.saveAnalysis({
+    // Выбор лучшего резюме
+    const ranked = rankResumeMatches(matchResults);
+    const chosen = ranked[0];
+    const fitScore = chosen.score;
+
+    // Генерация письма
+    const letterGen = await generateLetter({
+      vacancyText,
+      resumeText: resumes.find(r => r.id === chosen.resumeId)?.text || '',
+    });
+
+    // Сохранение результатов
+    db.setStatus(key, 'scored');
+    db.setChoice(key, chosen.resumeId, null);
+
+    if (letterGen.text) {
+      const savedLetter = db.saveLetter({
         vacancyKey: key,
-        resumeId: r.id,
-        kind: 'ats',
-        score: overall,
-        verdict: overall >= 70 ? 'strong_match' : overall >= 50 ? 'moderate_match' : 'weak_match',
-        payload: atsResult,
+        resumeId: chosen.resumeId,
+        text: letterGen.text,
+        plan: letterGen.plan,
+        lint: letterGen.lint
       });
-      scoredResumes.push({ resumeId: r.id, name: r.name, result: atsResult });
+
+      db.setStatus(key, 'drafted');
+      db.setChoice(key, chosen.resumeId, savedLetter.id);
+
+      console.log(`[llm] Вакансия ${key}: письмо сгенерировано (ошибки: ${letterGen.lint?.ok ? 'нет' : 'есть'})`);
+
+      return {
+        status: 'drafted',
+        key,
+        chosenResume: chosen.name,
+        fitScore,
+        letterId: savedLetter.id,
+        lintOk: letterGen.lint?.ok ?? false,
+      };
     }
-
-    if (scoredResumes.length === 0) {
-      throw new LlmError('no_resumes', 'Нет резюме с текстом для сопоставления');
-    }
-
-    // 2. Ранжирование и выбор лучшего резюме
-    const ranked = rankResumeMatches(scoredResumes);
-    const best = ranked[0];
-    const chosenResume = resumes.find(r => r.id === best.resumeId);
-
-    // 3. Fit Analysis с лучшим резюме
-    const fitResult = await analyzeFit({ vacancyText, resumeText: chosenResume.text.slice(0, 5000) });
-    const fitScore = computeFitScore(fitResult);
-    db.saveAnalysis({
-      vacancyKey: key,
-      resumeId: chosenResume.id,
-      kind: 'fit',
-      score: fitScore,
-      verdict: fitResult.verdict ?? (fitScore >= 65 ? 'ОТКЛИКАТЬСЯ' : 'ПРОПУСТИТЬ'),
-      payload: fitResult,
-    });
-
-    // Если вердикт «ПРОПУСТИТЬ» — сразу отправляем в skipped
-    if (fitResult.verdict === 'ПРОПУСТИТЬ' || fitScore < 45) {
-      db.setStatus(key, 'skipped', `Fit score ${fitScore}: ${fitResult.verdict || 'низкое соответствие'}`);
-      return { status: 'skipped', key, fitScore, resumeId: chosenResume.id };
-    }
-
-    // Назначаем выбранное резюме и переводим в scored
-    db.setChoice(key, { resumeId: chosenResume.id });
-    db.setStatus(key, 'scored', `Выбрано резюме «${chosenResume.name}» (ATS: ${best.result.hard_requirements_coverage_percent ?? 0}%)`);
-
-    // 4. Генерация письма
-    const letterGen = await generateLetter({ vacancyText, resumeText: chosenResume.text.slice(0, 5000) });
-    const savedLetter = db.saveLetter({
-      vacancyKey: key,
-      resumeId: chosenResume.id,
-      lang: 'ru',
-      plan: letterGen.plan,
-      text: letterGen.text,
-      lint: letterGen.lint,
-    });
-    db.setChoice(key, { letterId: savedLetter.id });
-    db.setStatus(key, 'drafted', `Письмо подготовлено (слов: ${letterGen.lint?.stats?.words ?? 0}, ошибки: ${letterGen.lint?.ok ? 'нет' : 'есть'})`);
 
     return {
-      status: 'drafted',
+      status: 'no_letter',
       key,
-      chosenResume: chosenResume.name,
+      chosenResume: chosen.name,
       fitScore,
-      letterId: savedLetter.id,
-      lintOk: letterGen.lint?.ok ?? false,
     };
   }
 
+  /** Проверка доступности LLM-эндпоинта */
+  async function status() {
+    try {
+      const res = await fetchImpl(`${root}/health`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { ok: true, model, details: data };
+      }
+      return { ok: false, model, status: res.status };
+    } catch (err) {
+      return { ok: false, model, error: err.message };
+    }
+  }
+
   return {
-    status,
     chatCompletion,
     auditResume,
     matchAts,
@@ -375,5 +337,6 @@ ${questionsFormatted}
     generateLetter,
     answerQuestions,
     processVacancyWorkflow,
+    status,
   };
 }

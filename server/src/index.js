@@ -7,6 +7,8 @@ import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createApi } from './api.js';
 import { createMcpServer } from './mcp.js';
+import { TelegramBot } from './telegram.js';
+import { createMonitor } from './monitor.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.resolve(HERE, '..', 'public');
@@ -188,14 +190,18 @@ async function handleMcp(req, res, deps) {
 
 /**
  * Собирает http.Server, но не запускает его: так его можно проверить в тестах.
- * @param {{ db: any, sites: any, bridge: any, llm?: any, autopilot?: any, publicDir?: string }} deps
+ * @param {{ db: any, sites: any, bridge: any, llm?: any, autopilot?: any, publicDir?: string, telegram?: any, monitor?: any }} deps
  */
-export function createApp({ db, sites, bridge, llm, autopilot, publicDir = PUBLIC_DIR }) {
-  const api = createApi({ db, llm, autopilot });
+export function createApp({ db, sites, bridge, llm, autopilot, telegram, monitor, publicDir = PUBLIC_DIR }) {
+  const api = createApi({ db, llm, autopilot, monitor });
+  const mon = monitor || null;
   return http.createServer(async (req, res) => {
     const startTime = Date.now();
     const requestId = randomUUID();
     const ip = req.socket?.remoteAddress ?? 'unknown';
+
+    // Monitor middleware
+    if (mon) mon.middleware(req, res, startTime);
 
     // CORS preflight
     if (req.method === 'OPTIONS') {
@@ -216,11 +222,13 @@ export function createApp({ db, sites, bridge, llm, autopilot, publicDir = PUBLI
     try {
       const { pathname } = new URL(req.url ?? '/', 'http://localhost');
       if (pathname === '/healthz') return sendJson(res, 200, { ok: true, requestId });
+      if (pathname === '/metrics' && mon) return sendJson(res, 200, mon.getStats());
       if (pathname === '/mcp') return await handleMcp(req, res, { db, sites, bridge, llm, autopilot });
       if (await api.handle(req, res)) return;
       await serveStatic(req, res, publicDir, requestId);
     } catch (err) {
       log('error', 'request_error', { requestId, method: req.method, url: req.url, error: err?.message ?? String(err) });
+      if (mon) mon.recordError('request_error', err?.message ?? String(err), { method: req.method, url: req.url });
       if (!res.headersSent) sendJson(res, 500, { error: { code: 'internal_error', message: 'Внутренняя ошибка сервера' } });
       else res.end();
     }
@@ -249,8 +257,20 @@ export async function start() {
   const db = createDb(dbPath);
   const bridge = createBridge();
   const sites = createSites(bridge);
+
+  // Telegram bot
+  const telegram = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, db);
+  if (telegram.enabled) {
+    await telegram.init();
+    telegram.startPolling();
+    log('info', 'telegram_bot_started', {});
+  }
+
+  // Monitor
+  const monitor = createMonitor(db);
+
   const llm = createLlmClient();
-  const autopilot = new AutopilotEngine({ db, sites, bridge, llm });
+  const autopilot = new AutopilotEngine({ db, sites, bridge, llm, monitor });
 
   const rawSettings = db.getSettings ? db.getSettings() : {};
   if (rawSettings.autopilot?.enabled) {
@@ -259,7 +279,7 @@ export async function start() {
 
   const port = Number(process.env.PORT ?? 8765);
   const host = process.env.HOST ?? '0.0.0.0';
-  const server = createApp({ db, sites, bridge, llm, autopilot });
+  const server = createApp({ db, sites, bridge, llm, autopilot, telegram, monitor });
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, host, resolve);
@@ -268,6 +288,7 @@ export async function start() {
   const stop = () => {
     log('info', 'server_stopping', {});
     if (autopilot) autopilot.stop();
+    if (telegram) telegram.stop();
     server.close(() => {
       db.close();
       process.exit(0);

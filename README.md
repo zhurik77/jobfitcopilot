@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<h1 align="center">Job Fit Copilot v0.6.0</h1>
+<h1 align="center">Job Fit Copilot v0.6.1</h1>
 
 <p align="center">
   <a href="https://github.com/zhurik77/jobfitcopilot/stargazers">
@@ -45,6 +45,17 @@
 
 <p align="center">
   💛 <b>Поддержать проект:</b> <a href="https://www.tbank.ru/cf/1cYvs7KjikV" target="_blank" rel="noopener">https://www.tbank.ru/cf/1cYvs7KjikV</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/zhurik77/jobfitcopilot/stargazers">
+    <img src="https://img.shields.io/github/stars/zhurik77/jobfitcopilot?style=for-the-badge&logo=github&label=⭐%20%D0%9F%D0%BE%D1%81%D1%82%D0%B0%D0%B2%D1%8C%D1%82%D0%B5%20%D0%B7%D0%B2%D0%B5%D0%B7%D0%B4%D1%83&color=gold" alt="Поставьте звезду!">
+  </a>
+</p>
+
+<p align="center">
+  <b>🚀 Цель — 500 звёзд!</b> Если проект полезен — поставьте ⭐. Это занимает 10 секунд и помогает другим найти Job Fit Copilot.
+  <br><a href="docs/STAR_TRACKER.md">📊 Трекер роста</a> · <a href="https://github.com/zhurik77/jobfitcopilot/discussions">💬 Discussions</a> · <a href="https://t.me/jobfitcopilot_chat">✈️ Telegram</a>
 </p>
 
 ---

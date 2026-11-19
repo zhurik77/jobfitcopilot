@@ -1,48 +1,34 @@
-name: Welcome First-Time Contributor
+name: 💬 Welcome New Contributors
 
 on:
+  issues:
+    types: [opened]
   pull_request_target:
-    types: [closed]
-
-permissions:
-  pull-requests: write
-  issues: write
+    types: [opened]
 
 jobs:
   welcome:
-    if: github.event.pull_request.merged == true && github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/first-interaction@v1
         with:
-          script: |
-            const pr = context.payload.pull_request;
-            const login = pr.user.login;
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            👋 Спасибо за ваш issue!
 
-            // Thank the contributor
-            await github.rest.issues.createComment({
-              issue_number: pr.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: [
-                `🎉 Thank you @${login} for your first contribution to **${context.repo.repo}**!`,
-                '',
-                'We really appreciate you taking the time to help improve the project.',
-                'Here are a few things you can do next:',
-                '',
-                '- Browse the [open issues](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/issues) to find another task',
-                '- Check the [project roadmap](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/blob/master/docs/ROADMAP.md) for upcoming features',
-                '- Join the discussion in existing issues and PRs',
-                '',
-                'Welcome aboard! 🚀'
-              ].join('\n')
-            });
+            Job Fit Copilot — проект с открытым исходным кодом, и каждый вопрос/предложение делает его лучше.
 
-            // Add contributor label
-            await github.rest.issues.addLabels({
-              issue_number: pr.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ['contributor']
-            });
+            ⏱ **Обычно отвечаем в течение 24 часов** (по будням).
+            💬 Есть Telegram-чат: [@jobfitcopilot_chat](https://t.me/jobfitcopilot_chat)
+            ⭐ Не забудьте поставить звезду, если проект полезен!
+
+          pr-message: |
+            🎉 Спасибо за ваш Pull Request!
+
+            **Что дальше?**
+            1. Убедитесь, что тесты проходят: `npm test && cd server && npm test`
+            2. Проверьте линтер: `npx eslint .`
+            3. Если меняете UI — приложите скриншот
+
+            После проверки мейнтейнер ответит в течение 48 часов.
+            Спасибо, что делаете проект лучше! 🚀
