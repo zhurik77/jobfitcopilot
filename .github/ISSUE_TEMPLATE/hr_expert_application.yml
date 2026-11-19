@@ -1,0 +1,99 @@
+name: 🤝 HR Expert Application
+description: Подать заявку на участие в программе экспертной верификации Job Fit Copilot
+title: "[HR Expert] Ваше имя"
+labels: ["hr-expert"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за интерес к программе! Заполните форму ниже — это займёт 3-5 минут.
+
+  - type: input
+    id: name
+    attributes:
+      label: Ваше имя
+      description: Как к вам обращаться
+      placeholder: "Иван Иванов"
+    validations:
+      required: true
+
+  - type: input
+    id: company
+    attributes:
+      label: Компания / Роль
+      description: Где вы работаете и какая у вас должность
+      placeholder: "HR Director в TechCorp"
+    validations:
+      required: true
+
+  - type: input
+    id: experience
+    attributes:
+      label: Опыт в HR / рекрутинге
+      description: Сколько лет вы в профессии
+      placeholder: "5+ лет"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: specialization
+    attributes:
+      label: Специализация
+      description: Ваша основная специализация
+      multiple: true
+      options:
+        - IT-рекрутинг
+        - HR-аналитика
+        - Talent Acquisition
+        - HR Generalist
+        - HR Business Partner
+        - Executive Search
+        - Другое
+    validations:
+      required: true
+
+  - type: dropdown
+    id: experience_with_ats
+    attributes:
+      label: Опыт работы с ATS-системами
+      description: Работали ли вы с ATS?
+      options:
+        - "Да, ежедневно"
+        - "Да, периодически"
+        - "Знаком(а) в общих чертах"
+        - "Нет опыта"
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Почему вы хотите участвовать?
+      description: Расскажите, что вас заинтересовало в программе
+      placeholder: "Хочу повлиять на качество AI-скоринга..."
+    validations:
+      required: true
+
+  - type: input
+    id: linkedin
+    attributes:
+      label: LinkedIn (опционально)
+      description: Ссылка на ваш профиль LinkedIn
+      placeholder: "https://linkedin.com/in/..."
+
+  - type: input
+    id: telegram
+    attributes:
+      label: Telegram (опционально)
+      description: Ваш Telegram username для связи
+      placeholder: "@username"
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Согласие
+      options:
+        - label: Я согласен(на) участвовать в программе 1-2 ревью в месяц
+          required: true
+        - label: Я ознакомился(ась) с описанием программы (docs/HR_EXPERT_REVIEW.md)
+          required: true

@@ -1,19 +1,257 @@
 <!doctype html>
 <html lang="ru">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Job Fit Copilot — ИИ, который отговаривает вас откликаться</title>
-    <meta name="description" content="Расширение для Chrome: разбирает вакансию по фактам из вашего резюме и честно говорит, стоит ли тратить вечер на отклик. Без бэкенда, на вашем API-ключе." />
-    <meta property="og:title" content="Job Fit Copilot — ИИ, который отговаривает вас откликаться" />
-    <meta property="og:description" content="Разбирает вакансию по фактам из вашего резюме и честно говорит: откликаться или пропустить. Данные не покидают браузер." />
-    <meta property="og:image" content="https://zhurik77.github.io/jobfitcopilot/shot-wide.jpg" />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="/jobfitcopilot/assets/index-vl-mZWP1.js"></script>
-    <link rel="stylesheet" crossorigin href="/jobfitcopilot/assets/index-tjvhFzMi.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+    <title>Job Fit Copilot — AI для анализа резюме</title>
+    <meta name="description" content="Open-source Chrome-расширение для ATS-анализа резюме и оценки соответствия вакансиям. Приглашаем HR-экспертов к калибровке AI." />
+    <style>
+        :root {
+            --bg: #08090a;
+            --surface: #111315;
+            --border: #1e2022;
+            --text: #e8eaed;
+            --text-secondary: #9aa0a6;
+            --accent: #60a5fa;
+            --accent-hover: #93c5fd;
+            --green: #34d399;
+            --gold: #fbbf24;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+        .hero { text-align: center; padding: 60px 0 40px; }
+        .hero h1 { font-size: 2.5em; font-weight: 700; margin-bottom: 16px; background: linear-gradient(135deg, var(--accent), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 1.1em; color: var(--text-secondary); max-width: 600px; margin: 0 auto 24px; }
+        .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85em; font-weight: 600; margin: 4px; }
+        .badge-star { background: rgba(251,191,36,0.15); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
+        .badge-hr { background: rgba(52,211,153,0.15); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+        .badge-oss { background: rgba(96,165,250,0.15); color: var(--accent); border: 1px solid rgba(96,165,250,0.3); }
+
+        .star-section {
+            text-align: center;
+            padding: 40px;
+            margin: 30px 0;
+            background: linear-gradient(135deg, rgba(251,191,36,0.05), rgba(251,191,36,0.02));
+            border: 1px solid rgba(251,191,36,0.2);
+            border-radius: 16px;
+        }
+        .star-section h2 { font-size: 1.5em; margin-bottom: 12px; }
+        .star-section p { color: var(--text-secondary); margin-bottom: 20px; }
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        .btn-outline:hover { border-color: var(--text-secondary); }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-gold:hover { background: #fcd34d; transform: translateY(-1px); }
+        .btn-green { background: var(--green); color: #000; }
+        .btn-green:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .section { margin: 40px 0; }
+        .section h2 { font-size: 1.3em; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 16px 0;
+        }
+        .card h3 { margin-bottom: 8px; font-size: 1.1em; }
+        .card p { color: var(--text-secondary); font-size: 0.95em; }
+        .card .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600; margin: 4px 2px; }
+        .tag-ai { background: rgba(96,165,250,0.15); color: var(--accent); }
+        .tag-hr { background: rgba(52,211,153,0.15); color: var(--green); }
+        .tag-oss { background: rgba(251,191,36,0.15); color: var(--gold); }
+
+        .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+        .features { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 600px) { .features { grid-template-columns: 1fr; } }
+        .feature-item { padding: 12px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
+        .feature-item .emoji { font-size: 1.5em; margin-bottom: 4px; }
+        .feature-item h4 { font-size: 0.95em; margin-bottom: 4px; }
+        .feature-item p { font-size: 0.85em; color: var(--text-secondary); }
+
+        .hr-cta {
+            text-align: center;
+            padding: 40px;
+            margin: 30px 0;
+            background: linear-gradient(135deg, rgba(52,211,153,0.05), rgba(52,211,153,0.02));
+            border: 1px solid rgba(52,211,153,0.2);
+            border-radius: 16px;
+        }
+        .hr-cta h2 { font-size: 1.5em; margin-bottom: 12px; }
+        .hr-cta p { color: var(--text-secondary); margin-bottom: 8px; }
+
+        .stats { display: flex; gap: 24px; justify-content: center; margin: 30px 0; flex-wrap: wrap; }
+        .stat { text-align: center; }
+        .stat-num { font-size: 2em; font-weight: 700; color: var(--accent); }
+        .stat-label { font-size: 0.85em; color: var(--text-secondary); }
+
+        footer { text-align: center; padding: 40px 0; color: var(--text-secondary); font-size: 0.85em; border-top: 1px solid var(--border); margin-top: 40px; }
+        footer a { color: var(--accent); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <div>
+                <span class="badge badge-oss">⚡ Open Source</span>
+                <span class="badge badge-hr">🤝 Ищем HR-экспертов</span>
+                <span class="badge badge-star">⭐ Цель: 500 звёзд</span>
+            </div>
+            <h1>Job Fit Copilot</h1>
+            <p>AI-расширение для Chrome, которое анализирует резюме, проверяет ATS-совместимость и оценивает соответствие вакансии. Бесплатно, open source, без сбора данных.</p>
+            <div class="cta-row">
+                <a href="https://github.com/zhurik77/jobfitcopilot" class="btn btn-primary">⭐ GitHub (поставьте звезду)</a>
+                <a href="https://github.com/zhurik77/jobfitcopilot/discussions/9" class="btn btn-green">🤝 Стать HR-экспертом</a>
+                <a href="https://t.me/jobfitcopilot_chat" class="btn btn-outline">💬 Telegram-чат</a>
+            </div>
+        </div>
+
+        <div class="star-section">
+            <h2>⭐ Нам нужна ваша звезда!</h2>
+            <p>Job Fit Copilot — open-source проект. Если расширение помогло вам с резюме или наймом — поставьте звезду на GitHub. <strong>Это занимает 10 секунд</strong> и помогает другим найти проект.</p>
+            <p style="color: var(--gold); font-size: 0.9em;">Текущая цель: 500 ⭐</p>
+            <a href="https://github.com/zhurik77/jobfitcopilot/stargazers" class="btn btn-gold">⭐ Поставить звезду на GitHub</a>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Возможности</h2>
+            <div class="features">
+                <div class="feature-item">
+                    <div class="emoji">🔍</div>
+                    <h4>Анализ соответствия вакансии</h4>
+                    <p>Детальная оценка fit по навыкам, опыту и образованию с объяснением каждого фактора</p>
+                </div>
+                <div class="feature-item">
+                    <div class="emoji">📊</div>
+                    <h4>ATS-аудит резюме</h4>
+                    <p>Проверка совместимости с ATS: ключевые слова, форматирование, структура разделов</p>
+                </div>
+                <div class="feature-item">
+                    <div class="emoji">📝</div>
+                    <h4>Генерация сопроводительных</h4>
+                    <p>Письма под конкретную вакансию с выбором тона (профессиональный, энтузиастичный, нейтральный)</p>
+                </div>
+                <div class="feature-item">
+                    <div class="emoji">🔄</div>
+                    <h4>Сравнение резюме</h4>
+                    <p>Сравните несколько версий резюме side-by-side и выберите лучшую</p>
+                </div>
+                <div class="feature-item">
+                    <div class="emoji">📈</div>
+                    <h4>Аналитика</h4>
+                    <p>Отслеживайте историю откликов, скора и успешных проходов</p>
+                </div>
+                <div class="feature-item">
+                    <div class="emoji">🤖</div>
+                    <h4>Автопилот</h4>
+                    <p>Автоматический отклик на вакансии с генерацией писем на hh.ru, LinkedIn, Upwork</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-num">555+</div>
+                <div class="stat-label">тестов</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">4</div>
+                <div class="stat-label">AI-провайдера</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">MIT</div>
+                <div class="stat-label">лицензия</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">2</div>
+                <div class="stat-label">языка</div>
+            </div>
+        </div>
+
+        <div class="hr-cta">
+            <h2>🤝 Ищем HR-экспертов!</h2>
+            <p>AI-скоринг работает быстро, но не идеально. Нам нужна ваша экспертиза, чтобы:</p>
+            <p style="color: var(--text-secondary); font-size: 0.9em;">
+                ✅ Проверять, не переоценивает ли AI формальные навыки<br>
+                ✅ Не пропускает ли важный контекст из смежной отрасли<br>
+                ✅ Правильно ли взвешивает soft skills vs hard skills
+            </p>
+            <div style="margin: 16px 0;">
+                <span class="badge badge-hr">📋 1-2 ревью в месяц</span>
+                <span class="badge badge-hr">⏱ 20-40 минут</span>
+                <span class="badge badge-hr">🔗 Рекомендация в LinkedIn</span>
+                <span class="badge badge-hr">✍️ Со-авторство</span>
+            </div>
+            <div class="cta-row">
+                <a href="https://github.com/zhurik77/jobfitcopilot/issues/new?template=hr_expert_application.md" class="btn btn-green">📝 Подать заявку</a>
+                <a href="https://github.com/zhurik77/jobfitcopilot/discussions/9" class="btn btn-outline">💬 Обсуждение</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Поддерживаемые AI-провайдеры</h2>
+            <div class="card">
+                <p style="margin-bottom: 8px;">
+                    <span class="tag tag-ai">OpenAI</span>
+                    <span class="tag tag-ai">Anthropic Claude</span>
+                    <span class="tag tag-ai">DeepSeek</span>
+                    <span class="tag tag-ai">NVIDIA NIM</span>
+                </p>
+                <p>Вы выбираете, какой AI использовать. Ваш API-ключ — данные не уходят на сторонние серверы.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📦 Технологии</h2>
+            <div class="card">
+                <p>
+                    <span class="tag tag-oss">Chrome Manifest V3</span>
+                    <span class="tag tag-oss">node:test</span>
+                    <span class="tag tag-oss">GitHub Actions</span>
+                    <span class="tag tag-oss">i18n</span>
+                    <span class="tag tag-oss">iOS HIG</span>
+                </p>
+                <p style="margin-top: 8px;">555+ тестов, CI на Linux/Windows/macOS, полная локализация (RU/EN).</p>
+            </div>
+        </div>
+
+        <div class="section" style="text-align: center;">
+            <h2>📢 Помогите проекту расти</h2>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px;">
+                <a href="https://github.com/zhurik77/jobfitcopilot" class="btn btn-gold">⭐ Поставить звезду</a>
+                <a href="https://github.com/zhurik77/jobfitcopilot/discussions/9" class="btn btn-green">🤝 Стать HR-экспертом</a>
+                <a href="https://github.com/zhurik77/jobfitcopilot/issues" class="btn btn-outline">🐛 Сообщить о баге</a>
+                <a href="https://t.me/jobfitcopilot_chat" class="btn btn-outline">💬 Чат в Telegram</a>
+            </div>
+        </div>
+
+        <footer>
+            <p>Job Fit Copilot — Open Source (MIT License)</p>
+            <p style="margin-top: 8px;">
+                <a href="https://github.com/zhurik77/jobfitcopilot">GitHub</a> ·
+                <a href="https://github.com/zhurik77/jobfitcopilot/discussions">Discussions</a> ·
+                <a href="https://t.me/jobfitcopilot_chat">Telegram</a>
+            </p>
+        </footer>
+    </div>
+</body>
 </html>

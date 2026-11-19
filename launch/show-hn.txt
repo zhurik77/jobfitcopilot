@@ -1,0 +1,34 @@
+## 🔥 Show HN: Job Fit Copilot — Open-Source AI Chrome Extension for ATS Resume Analysis (555+ tests)
+
+I built a Chrome extension that analyzes your resume against any job description using AI. It's fully open source (MIT), has 555+ tests, and supports multiple AI providers.
+
+**What it does:**
+- Paste any job description + your resume → get a detailed fit score with breakdown
+- ATS compliance audit → see what recruiters' systems see
+- Cover letter generator → tailored letters in one click
+- Multi-resume comparison → pick your best version
+- Works on LinkedIn, hh.ru, Upwork
+
+**Why I built it:**
+I was spending hours manually comparing resumes to job descriptions. Existing tools were either expensive SaaS or closed-source with questionable data practices. So I built my own — free, private, open source.
+
+**Tech:**
+- Chrome Manifest V3 (side panel, content scripts, service worker)
+- Multiple LLM providers: OpenAI, Anthropic, DeepSeek, NVIDIA NIM
+- 555+ tests with node:test (no frameworks)
+- Full i18n (English + Russian)
+
+**Privacy:**
+No data collection. No tracking. No accounts. You bring your own API key, everything runs in your browser.
+
+**Looking for:**
+- ⭐ Stars: https://github.com/zhurik77/jobfitcopilot
+- 👥 HR experts to help calibrate the AI scoring
+- 🧑‍💻 Contributors for new platform integrations
+
+**Links:**
+- GitHub: https://github.com/zhurik77/jobfitcopilot
+- README.en: https://github.com/zhurik77/jobfitcopilot/blob/master/README.en.md
+- HR Expert Program: https://github.com/zhurik77/jobfitcopilot/issues/7
+
+Would love your feedback! What features would you add?
