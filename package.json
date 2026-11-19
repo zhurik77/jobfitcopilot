@@ -17,7 +17,7 @@
     "panel": "npm --prefix site run build"
   },
   "devDependencies": {
-    "eslint": "^9.15.0",
+    "eslint": "^10.15.0",
     "playwright": "^1.49.0"
   },
   "engines": {
