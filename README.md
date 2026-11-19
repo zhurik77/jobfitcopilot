@@ -54,8 +54,13 @@
 </p>
 
 <p align="center">
-  <b>🚀 Цель — 500 звёзд!</b> Если проект полезен — поставьте ⭐. Это занимает 10 секунд и помогает другим найти Job Fit Copilot.
-  <br><a href="docs/STAR_TRACKER.md">📊 Трекер роста</a> · <a href="https://github.com/zhurik77/jobfitcopilot/discussions">💬 Discussions</a> · <a href="https://t.me/jobfitcopilot_chat">✈️ Telegram</a>
+  🚀 <b>Цель — 500 звёзд!</b> Если проект полезен — поставьте ⭐. Это занимает 10 секунд и помогает другим найти Job Fit Copilot.
+  <br>
+  <a href="https://star-history.com/#zhurik77/jobfitcopilot&Date">
+    <img src="https://api.star-history.com/svg?repos=zhurik77/jobfitcopilot&type=Date" width="400" alt="Star History">
+  </a>
+  <br>
+  <a href="docs/STAR_TRACKER.md">📊 Трекер роста</a> · <a href="https://github.com/zhurik77/jobfitcopilot/discussions">💬 Discussions</a> · <a href="https://t.me/jobfitcopilot_chat">✈️ Telegram</a>
 </p>
 
 ---
@@ -88,7 +93,7 @@ Job Fit Copilot делают люди, а не корпорация. Вот гд
 
 | Роль | Что нужно делать |
 |------|------------------|
-| **HR-эксперты** 🧑‍💼 | Верифицировать качество ATS-анализа, подсказывать, какие факторы важнее для реального найма, тестировать на реальных кейсах |
+| **HR-эксперты** 🤝 | [Подать заявку](https://github.com/zhurik77/jobfitcopilot/issues/new?template=hr_expert_application) — 1-2 ревью/мес, 20-40 мин. Взамен: со-авторство, LinkedIn recommendation, ранний доступ. [Подробнее](docs/HR_EXPERT_REVIEW.md) |
 | **Разработчики** 🧑‍💻 | Добавлять адаптеры для новых сайтов с вакансиями, улучшать алгоритм скоринга, писать тесты, ревьюить PR |
 | **Переводчики** 🌍 | Переводить интерфейс на новые языки — см. [TRANSLATION_GUIDE.md](docs/TRANSLATION_GUIDE.md) |
 | **Тестировщики** 🧪 | Находить edge cases, при которых ATS-анализ работает некорректно, писать тесты для редких сценариев |
